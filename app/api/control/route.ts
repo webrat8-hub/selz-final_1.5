@@ -1,27 +1,38 @@
 import { NextResponse } from 'next/server';
-import Redis from 'ioredis';
-
-const redis = new Redis(process.env.REDIS_URL || '');
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+// Fungsi cerdas buat nembak database tanpa library luar
+async function runRedis(command: string[]) {
+  const url = "https://leg-consonant-unblemished-95778.upstash.io";
+  const token = "jUk8Nw2m7bOcfrxjpkAwA825ncyYyWP2";
+  
+  const res = await fetch(`${url}/${command.join('/')}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store'
+  });
+  const data = await res.json();
+  return data.result;
+}
+
 export async function POST(request: Request) {
   try {
-    const { action } = await request.json();
+    const body = await request.json().catch(() => ({}));
+    const action = body.action;
 
     // 1. Cek status Lock Web
-    const isLocked = await redis.get('yaemiko_web_locked');
+    const isLocked = await runRedis(['GET', 'yaemiko_web_locked']);
     if (isLocked === 'true') {
       return NextResponse.json({ status: 'locked', message: 'Website dikunci oleh Selz!' }, { status: 403 });
     }
 
     // 2. Logika pencatatan Attack
     if (action === 'attack') {
-      let currentLimit = await redis.get('yaemiko_bug_limit');
+      let currentLimit = await runRedis(['GET', 'yaemiko_bug_limit']);
       
       if (currentLimit === null) {
-        await redis.set('yaemiko_bug_limit', '5');
+        await runRedis(['SET', 'yaemiko_bug_limit', '5']);
         currentLimit = '5';
       }
 
@@ -32,15 +43,15 @@ export async function POST(request: Request) {
       }
 
       const newLimit = limitNum - 1;
-      await redis.set('yaemiko_bug_limit', newLimit.toString());
+      await runRedis(['SET', 'yaemiko_bug_limit', newLimit.toString()]);
 
       return NextResponse.json({ status: 'success', remainingLimit: newLimit });
     }
 
-    const currentLimit = await redis.get('yaemiko_bug_limit') ?? '5';
+    const currentLimit = await runRedis(['GET', 'yaemiko_bug_limit']) ?? '5';
     return NextResponse.json({ status: 'ready', remainingLimit: parseInt(currentLimit) });
 
   } catch (error) {
-    return NextResponse.json({ status: 'ready', remainingLimit: 5, msg: 'Fallback aktif' });
+    return NextResponse.json({ status: 'ready', remainingLimit: 5, msg: 'Safe Fallback' });
   }
 }
