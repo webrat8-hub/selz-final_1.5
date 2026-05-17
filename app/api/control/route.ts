@@ -1,62 +1,51 @@
 import { NextResponse } from 'next/server';
-import { kv } from '@vercel/kv';
+import { createClient } from '@vercel/kv';
+
+// Trik cerdas: ngebaca KV_URL atau STORAGE_URL biar gak sensitif salah nama prefix di Vercel
+const kv = createClient({
+  url: process.env.KV_REST_API_URL || process.env.STORAGE_REST_API_URL || '',
+  token: process.env.KV_REST_API_TOKEN || process.env.STORAGE_REST_API_TOKEN || '',
+});
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { action, valueToSet, messageText } = body;
+    const { action } = await request.json();
 
-    if (action === 'get') {
+    // 1. Cek status Lock Web
+    const isLocked = await kv.get('yaemiko_web_locked');
+    if (isLocked === true) {
+      return NextResponse.json({ status: 'locked', message: 'Website sedang dikunci oleh Selz!' }, { status: 403 });
+    }
+
+    // 2. Logika pencatatan Attack / Fitur Kurang Limit
+    if (action === 'attack') {
       let currentLimit = await kv.get<number>('yaemiko_bug_limit');
-      let isWebLocked = await kv.get<boolean>('yaemiko_web_locked');
-      let lastReset = await kv.get<number>('yaemiko_last_reset');
-
-      const now = Date.now();
-
+      
+      // Jika database kosong (pertama kali), set default ke 5
       if (currentLimit === null || currentLimit === undefined) {
-        await kv.set('yaemiko_bug_limit', 5);
-        await kv.set('yaemiko_web_locked', false);
-        await kv.set('yaemiko_last_reset', now);
         currentLimit = 5;
-        isWebLocked = false;
-      } else {
-        if (lastReset) {
-          const timePassed = now - lastReset;
-          if (timePassed >= 24 * 60 * 60 * 1000) {
-            await kv.set('yaemiko_bug_limit', 5);
-            await kv.set('yaemiko_last_reset', now);
-            currentLimit = 5;
-          }
-        }
+        await kv.set('yaemiko_bug_limit', 5);
       }
-      return NextResponse.json({ ok: true, limit: currentLimit, locked: isWebLocked });
+
+      if (currentLimit <= 0) {
+        return NextResponse.json({ status: 'limit_empty', message: 'Limit harian habis!' }, { status: 429 });
+      }
+
+      // Potong limit 1 poin
+      const newLimit = currentLimit - 1;
+      await kv.set('yaemiko_bug_limit', newLimit);
+
+      return NextResponse.json({ status: 'success', remainingLimit: newLimit });
     }
 
-    if (action === 'set' && valueToSet !== undefined) {
-      await kv.set('yaemiko_bug_limit', valueToSet);
-      return NextResponse.json({ ok: true });
-    }
+    // Default return jika status check biasa
+    const currentLimit = await kv.get<number>('yaemiko_bug_limit') ?? 5;
+    return NextResponse.json({ status: 'ready', remainingLimit: currentLimit });
 
-    if (action === 'sendReport' && messageText) {
-      const BOT_TOKEN = '8208922468:AAGCSBYVOB-aRRz1s__rHZUwh2h5rSMsRbk';
-      const CHAT_ID = '6481060681';
-      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: CHAT_ID,
-          text: messageText,
-          parse_mode: 'Markdown'
-        })
-      });
-      return NextResponse.json({ ok: true });
-    }
-
-    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
-  } catch {
-    return NextResponse.json({ error: 'Database Error' }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ status: 'error', message: 'Database Connection Error' }, { status: 500 });
   }
-                  }
+}
