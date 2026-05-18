@@ -54,7 +54,7 @@ export async function POST(request: Request) {
           await sendTelegramMessage("🔒 *Suksess!* Website sekarang dalam kondisi *TERKUNCI* ketat oleh Selz.");
         } else if (command === '/unlockweb') {
           await runRedis(['SET', 'yaemiko_web_locked', 'false']);
-          await sendTelegramMessage("🔓 *Suksess!* Website udah di *BUKA* kembali, user bisa bebas pakai.");
+          await sendTelegramMessage(" 🔓 *Suksess!* Website udah di *BUKA* kembali, user bisa bebas pakai.");
         }
       }
       return NextResponse.json({ ok: true });
