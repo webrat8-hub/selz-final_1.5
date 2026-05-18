@@ -1,19 +1,25 @@
 import { NextResponse } from 'next/server';
 
+// Saklar wajib buat matiin cache Next.js/Vercel biar data selalu real-time
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-// Fungsi cerdas buat nembak database tanpa library luar
 async function runRedis(command: string[]) {
-  const url = "https://leg-consonant-unblemished-95778.upstash.io";
-  const token = "jUk8Nw2m7bOcfrxjpkAwA825ncyYyWP2";
-  
-  const res = await fetch(`${url}/${command.join('/')}`, {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: 'no-store'
-  });
-  const data = await res.json();
-  return data.result;
+  try {
+    const url = "https://leg-consonant-unblemished-95778.upstash.io";
+    const token = "jUk8Nw2m7bOcfrxjpkAwA825ncyYyWP2";
+    
+    // Di sini kita tambahin cache: 'no-store' biar dia selalu nembak database asli
+    const res = await fetch(`${url}/${command.join('/')}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store'
+    });
+    const data = await res.json();
+    return data.result;
+  } catch (err) {
+    console.error("Gagal baca database di API Control:", err);
+    return null;
+  }
 }
 
 export async function POST(request: Request) {
@@ -21,7 +27,7 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => ({}));
     const action = body.action;
 
-    // 1. Cek status Lock Web
+    // 1. Cek status Lock Web (Anti Cache)
     const isLocked = await runRedis(['GET', 'yaemiko_web_locked']);
     if (isLocked === 'true') {
       return NextResponse.json({ status: 'locked', message: 'Website dikunci oleh Selz!' }, { status: 403 });
@@ -48,10 +54,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ status: 'success', remainingLimit: newLimit });
     }
 
-    const currentLimit = await runRedis(['GET', 'yaemiko_bug_limit']) ?? '5';
-    return NextResponse.json({ status: 'ready', remainingLimit: parseInt(currentLimit) });
+    // JALUR UTAMA: Saat dashboard web di-refresh, dia bakal kesini buat nanya sisa limit
+    const currentLimit = await runRedis(['GET', 'yaemiko_bug_limit']);
+    const finalLimit = currentLimit !== null ? parseInt(currentLimit) : 5;
+
+    return NextResponse.json({ status: 'ready', remainingLimit: finalLimit });
 
   } catch (error) {
+    // Kalau eror, kasih fallback aman angka 5 biar web gak eror 500
     return NextResponse.json({ status: 'ready', remainingLimit: 5, msg: 'Safe Fallback' });
   }
 }
