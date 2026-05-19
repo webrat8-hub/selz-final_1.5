@@ -8,20 +8,23 @@ const UPSTASH_URL = "https://leg-consonant-unblemished-95778.upstash.io";
 const UPSTASH_TOKEN = "jUk8Nw2m7bOcfrxjpkAwA825ncyYyWP2";
 
 export async function POST(request: NextRequest) {
+  // Tambah pembacaan header aktif biar Vercel mutlak tahu ini dynamic route tracker
+  const trackingAgent = request.headers.get('user-agent') || '';
+  
   try {
     const body = await request.json().catch(() => ({}));
     const { action, valueToSet, messageText } = body;
     const timeBuster = Date.now();
 
     // ==========================================
-    // 1. JALUR UTILITY BUAT BOT LU (LOCK / RESET)
+    // 1. JALUR UTILITY BOT (LOCK & RESET)
     // ==========================================
     if (action === 'botLockWeb') {
       await fetch(`${UPSTASH_URL}/set/yaemiko_web_locked/true?t=${timeBuster}`, {
         headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
         cache: 'no-store'
       });
-      return NextResponse.json({ ok: true, message: "Web Berhasil Di-Lock!" });
+      return NextResponse.json({ ok: true, message: "Web Locked!" });
     }
 
     if (action === 'botUnlockWeb') {
@@ -29,7 +32,7 @@ export async function POST(request: NextRequest) {
         headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
         cache: 'no-store'
       });
-      return NextResponse.json({ ok: true, message: "Web Berhasil Di-Unlock!" });
+      return NextResponse.json({ ok: true, message: "Web Unlocked!" });
     }
 
     if (action === 'botResetLimit') {
@@ -37,11 +40,11 @@ export async function POST(request: NextRequest) {
         headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
         cache: 'no-store'
       });
-      return NextResponse.json({ ok: true, message: "Limit Berhasil Di-Reset ke 5!" });
+      return NextResponse.json({ ok: true, message: "Limit Reset ke 5!" });
     }
 
     // ==========================================
-    // 2. JALUR LAPORAN TELEGRAM REPORT
+    // 2. JALUR TELEGRAM REPORT
     // ==========================================
     if (action === 'sendReport' && messageText) {
       const BOT_TOKEN = '8208922468:AAGCSBYVOB-aRRz1s__rHZUwh2h5rSMsRbk';
@@ -56,7 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ==========================================
-    // 3. JALUR SET LIMIT (SAAT USER KLIK TOMBOL BUG)
+    // 3. JALUR SET LIMIT USER (PAS KLIK TOMBOL BUG)
     // ==========================================
     if (action === 'set' && valueToSet !== undefined) {
       await fetch(`${UPSTASH_URL}/set/yaemiko_bug_limit/${valueToSet}?t=${timeBuster}`, {
@@ -67,7 +70,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ==========================================
-    // 4. JALUR GET DATA (LOGIKA YANG SUDAH DIBERSIHKAN TOTAL)
+    // 4. JALUR GET DATA ASLI (SINKRONISASI REALTIME)
     // ==========================================
     const limitRes = await fetch(`${UPSTASH_URL}/get/yaemiko_bug_limit?t=${timeBuster}`, {
       headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
@@ -75,8 +78,8 @@ export async function POST(request: NextRequest) {
     });
     const limitData = await limitRes.json();
     
-    // Logika bersih: Ambil mentah-mentah dari database, JANGAN PERNAH maksa nulis / ngeriset angka 5 dari server!
-    let finalLimit = 5; 
+    // AMBIL DATA MURNI. JALUR INI HARAM MENGUBAH / RE-SET DATABASE KE 5 SECARA SEPIHAK!
+    let finalLimit = null; 
     if (limitData && limitData.result !== null && limitData.result !== undefined) {
       finalLimit = Number(limitData.result);
     }
@@ -88,10 +91,9 @@ export async function POST(request: NextRequest) {
     const lockData = await lockRes.json();
     const finalLocked = lockData.result === 'true';
 
-    // Kirim respon balik ke web
     const response = NextResponse.json({
       ok: true,
-      limit: finalLimit,
+      limit: finalLimit, // Kalau null biar dibaca null di page.tsx, bukan dipaksa 5
       locked: finalLocked
     });
 
@@ -102,7 +104,7 @@ export async function POST(request: NextRequest) {
     return response;
 
   } catch (error) {
-    // Jalur aman darurat kalau database down
-    return NextResponse.json({ ok: true, limit: 5, locked: false });
+    // JIKA TIMEOUT ATAU ERROR, BALIKIN NULL BIAR LAYAR GA TRICKY REFRESH BALIK KE 5
+    return NextResponse.json({ ok: true, limit: null, locked: false });
   }
-  }
+        }
