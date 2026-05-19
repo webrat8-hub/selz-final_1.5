@@ -27,6 +27,9 @@ export default function YaeMikoDashboard() {
 
   const bgMusicRef = useRef<HTMLAudioElement>(null);
 
+  // PELINDUNG UTAMA: Biar auto-refresh gak ganggu pas lagi motong limit di layar
+  const isSendingRef = useRef(false);
+
   const BUG_TYPES = [
     { name: "DELAY INVISIBLE", code: "delayLow", icon: <Ghost className="w-10 h-10 text-cyan-400" /> },
     { name: "FORCE CLOSE INVIS", code: "crashHigh", icon: <Skull className="w-10 h-10 text-red-500" /> },
@@ -38,6 +41,9 @@ export default function YaeMikoDashboard() {
   const syncWithCloud = async (action: 'get' | 'set' | 'sendReport', valueToSet?: number, messageText?: string) => {
     try {
       if (action === 'get') {
+        // Kalau lu lagi proses ngirim bug, TOLAK update auto-refresh biar limit gak mental
+        if (isSendingRef.current) return;
+
         const res = await fetch(`/api/control?update=${Date.now()}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -46,7 +52,8 @@ export default function YaeMikoDashboard() {
         const data = await res.json();
         
         if (data && data.ok) {
-          if (data.limit !== undefined && data.limit !== null) {
+          // Double check biar bener-bener aman
+          if (!isSendingRef.current && data.limit !== undefined && data.limit !== null) {
             setBugLimit(Number(data.limit));
           }
           if (data.locked !== undefined && data.locked !== null) {
@@ -79,7 +86,6 @@ export default function YaeMikoDashboard() {
     initData();
   }, []);
 
-  // Auto-refresh aman karena jalurnya sudah bersih total dari bot
   useEffect(() => {
     const autoRefresh = setInterval(async () => {
       await syncWithCloud('get');
@@ -134,19 +140,26 @@ export default function YaeMikoDashboard() {
     }
     
     const nextLimit = Math.max(0, bugLimit - 1);
+    
+    // Kunci status layar sekarang!
+    isSendingRef.current = true;
     setBugLimit(nextLimit);
     setIsSending(true);
 
     const delay = engineSpeed === "Instant" ? 1000 : engineSpeed === "Fast" ? 2500 : 4000;
     const selectedBug = BUG_TYPES[activeNav].name;
     
-    // Kirim data langsung ke DB (Instant, No Delay)
-    syncWithCloud('set', nextLimit);
+    // Kirim data langsung ke DB dan tunggu prosesnya kelar
+    await syncWithCloud('set', nextLimit);
 
     setTimeout(async () => { 
       setIsSending(false); 
+      isSendingRef.current = false; // Buka kembali kunci refresh setelah kelar
       const attackMsg = `🚀 *LAPORAN PENYERANGAN BUG*\n\n👤 *Pengirim:* ${username}\n🎯 *Target:* \`${targetNumber}\`\n👾 *Jenis Bug:* ${selectedBug}\n⚡ *Speed Engine:* ${engineSpeed}\n📉 *Sisa Limit User:* ${nextLimit}/5`;
       await syncWithCloud('sendReport', undefined, attackMsg);
+      
+      // Ambil data ulang biar data layar dan DB beneran singkron di akhir proses
+      await syncWithCloud('get');
     }, delay);
   };
 
@@ -314,4 +327,4 @@ export default function YaeMikoDashboard() {
       `}</style>
     </div>
   )
-     }
+    }
