@@ -8,8 +8,8 @@ const UPSTASH_URL = "https://leg-consonant-unblemished-95778.upstash.io";
 const UPSTASH_TOKEN = "jUk8Nw2m7bOcfrxjpkAwA825ncyYyWP2";
 
 export async function POST(request: NextRequest) {
-  // Tambah pembacaan header aktif biar Vercel mutlak tahu ini dynamic route tracker
-  const trackingAgent = request.headers.get('user-agent') || '';
+  // Paksa Vercel menganggap ini dynamic route dengan membaca header aktif
+  const tracking = request.headers.get('user-agent') || '';
   
   try {
     const body = await request.json().catch(() => ({}));
@@ -72,31 +72,37 @@ export async function POST(request: NextRequest) {
     // ==========================================
     // 4. JALUR GET DATA ASLI (SINKRONISASI REALTIME)
     // ==========================================
+    
+    // --- AMBIL DATA LIMIT ---
     const limitRes = await fetch(`${UPSTASH_URL}/get/yaemiko_bug_limit?t=${timeBuster}`, {
       headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
       cache: 'no-store'
     });
     const limitData = await limitRes.json();
     
-    // AMBIL DATA MURNI. JALUR INI HARAM MENGUBAH / RE-SET DATABASE KE 5 SECARA SEPIHAK!
-    let finalLimit = null; 
+    // Perbaikan fatal: Konversi string Upstash ke Angka secara aman
+    let finalLimit = 5; 
     if (limitData && limitData.result !== null && limitData.result !== undefined) {
       finalLimit = Number(limitData.result);
     }
 
+    // --- AMBIL DATA LOCK STATUS ---
     const lockRes = await fetch(`${UPSTASH_URL}/get/yaemiko_web_locked?t=${timeBuster}`, {
       headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
       cache: 'no-store'
     });
     const lockData = await lockRes.json();
-    const finalLocked = lockData.result === 'true';
+    
+    // Perbaikan fatal: Cek string "true" atau boolean true dari Upstash secara mutlak
+    const finalLocked = lockData.result === 'true' || lockData.result === true;
 
     const response = NextResponse.json({
       ok: true,
-      limit: finalLimit, // Kalau null biar dibaca null di page.tsx, bukan dipaksa 5
+      limit: finalLimit,
       locked: finalLocked
     });
 
+    // Header super ketat agar Vercel & Browser terpaksa muntah data baru pas di-refresh tab
     response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
     response.headers.set('Pragma', 'no-cache');
     response.headers.set('Expires', '0');
@@ -104,7 +110,6 @@ export async function POST(request: NextRequest) {
     return response;
 
   } catch (error) {
-    // JIKA TIMEOUT ATAU ERROR, BALIKIN NULL BIAR LAYAR GA TRICKY REFRESH BALIK KE 5
-    return NextResponse.json({ ok: true, limit: null, locked: false });
+    return NextResponse.json({ ok: true, limit: 5, locked: false });
   }
-        }
+                }
