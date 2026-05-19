@@ -1,17 +1,21 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
+// Paksa Vercel untuk selalu render live, dilarang keras nge-cache!
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-// Fungsi nembak Upstash Redis secara direct via Fetch API
 async function runRedis(command: string[]) {
   try {
     const url = "https://leg-consonant-unblemished-95778.upstash.io";
     const token = "jUk8Nw2m7bOcfrxjpkAwA825ncyYyWP2";
     
-    const res = await fetch(`${url}/${command.join('/')}`, {
+    // Tambahin timestamp unik di url biar fetch-nya gak di-cache sama internal server Vercel
+    const cacheBuster = `?t=${Date.now()}`;
+    const res = await fetch(`${url}/${command.join('/')}${cacheBuster}`, {
       headers: { Authorization: `Bearer ${token}` },
-      cache: 'no-store'
+      method: 'GET',
+      cache: 'no-store',
+      next: { revalidate: 0 }
     });
     const data = await res.json();
     return data.result;
@@ -21,12 +25,13 @@ async function runRedis(command: string[]) {
   }
 }
 
-export async function POST(request: Request) {
+// Gunakan NextRequest (bukan Request biasa) biar Vercel tahu ini dynamic route tracker
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
     const { action, valueToSet, messageText } = body;
 
-    // JALUR 1: Mengirim laporan ke bot Telegram lo (Login & Serangan Bug)
+    // 1. JALUR LAPORAN TELEGRAM
     if (action === 'sendReport' && messageText) {
       const BOT_TOKEN = '8208922468:AAGCSBYVOB-aRRz1s__rHZUwh2h5rSMsRbk';
       const CHAT_ID = '6481060681';
@@ -43,30 +48,33 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true });
     }
 
-    // JALUR 2: Saat user klik tombol kirim bug, web bakal ngeset limit baru ke Redis
+    // 2. JALUR SET LIMIT (SAAT KLIK TOMBOL BUG)
     if (action === 'set' && valueToSet !== undefined) {
       await runRedis(['SET', 'yaemiko_bug_limit', valueToSet.toString()]);
       return NextResponse.json({ ok: true });
     }
 
-    // JALUR 3: SINKRONISASI REALTIME (Aksi 'get' yang jalan tiap 3 detik dari web lo)
-    // 1. Ambil status kunci web
+    // 3. JALUR GET REALTIME (ANTI CACHE TOTAL)
     const isLocked = await runRedis(['GET', 'yaemiko_web_locked']);
     const finalLocked = isLocked === 'true';
 
-    // 2. Ambil sisa limit harian
     const currentLimit = await runRedis(['GET', 'yaemiko_bug_limit']);
     const finalLimit = currentLimit !== null ? parseInt(currentLimit) : 5;
 
-    // BALASAN DATA JALUR AMAN: Harus ada object 'ok', 'limit', dan 'locked' biar dibaca page.tsx!
+    // Kirim response fresh dari database
     return NextResponse.json({
       ok: true,
       limit: finalLimit,
       locked: finalLocked
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      }
     });
 
   } catch (error) {
-    // Jika ada kendala, kasih status aman biar web ga langsung crash blank hitam
     return NextResponse.json({ ok: true, limit: 5, locked: false });
   }
-  }
+}
