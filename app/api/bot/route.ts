@@ -5,9 +5,10 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 
+// Sudah gua pasang database asli milik lu, Selz!
 const redis = new Redis({
-  url: 'https://led-consonant-unblemished-95778.upstash.io',
-  token: 'jUk8Nw2m7bOcfrxjpkAwA825ncyYyWP2',
+  url: 'https://distinct-cod-130750.upstash.io',
+  token: 'ggAAAAAAAf6-AAIgcDHeVFLHwvkp1sCioAyDzzqCKlgro5xs6vc7kpflNhsR3Q',
 });
 
 export async function POST(request: NextRequest) {
