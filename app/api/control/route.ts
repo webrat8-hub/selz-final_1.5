@@ -1,45 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Redis } from '@upstash/redis';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 
-// URL SUDAH DIPERBAIKI: MENGGUNAKAN 'led' BUKAN 'leg'
-const UPSTASH_URL = "https://led-consonant-unblemished-95778.upstash.io";
-const UPSTASH_TOKEN = "jUk8Nw2m7bOcfrxjpkAwA825ncyYyWP2";
+// Sistem otomatis resmi dari Upstash, aman dari typo URL
+const redis = new Redis({
+  url: 'https://led-consonant-unblemished-95778.upstash.io',
+  token: 'jUk8Nw2m7bOcfrxjpkAwA825ncyYyWP2',
+});
 
 export async function POST(request: NextRequest) {
-  const tracking = request.headers.get('user-agent') || '';
-  
   try {
     const body = await request.json().catch(() => ({}));
     const { action, valueToSet, messageText } = body;
-    const timeBuster = Date.now();
 
     // ==========================================
     // 1. JALUR UTILITY BOT (LOCK & RESET)
     // ==========================================
     if (action === 'botLockWeb') {
-      await fetch(`${UPSTASH_URL}/set/yaemiko_web_locked/true?t=${timeBuster}`, {
-        headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
-        cache: 'no-store'
-      });
+      await redis.set('yaemiko_web_locked', 'true');
       return NextResponse.json({ ok: true, message: "Web Locked!" });
     }
 
     if (action === 'botUnlockWeb') {
-      await fetch(`${UPSTASH_URL}/set/yaemiko_web_locked/false?t=${timeBuster}`, {
-        headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
-        cache: 'no-store'
-      });
+      await redis.set('yaemiko_web_locked', 'false');
       return NextResponse.json({ ok: true, message: "Web Unlocked!" });
     }
 
     if (action === 'botResetLimit') {
-      await fetch(`${UPSTASH_URL}/set/yaemiko_bug_limit/5?t=${timeBuster}`, {
-        headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
-        cache: 'no-store'
-      });
+      await redis.set('yaemiko_bug_limit', 5);
       return NextResponse.json({ ok: true, message: "Limit Reset ke 5!" });
     }
 
@@ -49,7 +40,7 @@ export async function POST(request: NextRequest) {
     if (action === 'sendReport' && messageText) {
       const BOT_TOKEN = '8208922468:AAGCSBYVOB-aRRz1s__rHZUwh2h5rSMsRbk';
       const CHAT_ID = '6481060681';
-      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage?t=${timeBuster}`, {
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chat_id: CHAT_ID, text: messageText, parse_mode: 'Markdown' }),
@@ -62,37 +53,22 @@ export async function POST(request: NextRequest) {
     // 3. JALUR SET LIMIT USER (PAS KLIK TOMBOL BUG)
     // ==========================================
     if (action === 'set' && valueToSet !== undefined) {
-      await fetch(`${UPSTASH_URL}/set/yaemiko_bug_limit/${valueToSet}?t=${timeBuster}`, {
-        headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
-        cache: 'no-store'
-      });
+      await redis.set('yaemiko_bug_limit', valueToSet);
       return NextResponse.json({ ok: true });
     }
 
     // ==========================================
     // 4. JALUR GET DATA ASLI (SINKRONISASI REALTIME)
     // ==========================================
+    const dbLimit = await redis.get('yaemiko_bug_limit');
+    const dbLocked = await redis.get('yaemiko_web_locked');
     
-    // --- AMBIL DATA LIMIT ---
-    const limitRes = await fetch(`${UPSTASH_URL}/get/yaemiko_bug_limit?t=${timeBuster}`, {
-      headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
-      cache: 'no-store'
-    });
-    const limitData = await limitRes.json();
-    
-    let finalLimit = 5; 
-    if (limitData && limitData.result !== null && limitData.result !== undefined) {
-      finalLimit = Number(limitData.result);
+    let finalLimit = 5;
+    if (dbLimit !== null && dbLimit !== undefined) {
+      finalLimit = Number(dbLimit);
     }
 
-    // --- AMBIL DATA LOCK STATUS ---
-    const lockRes = await fetch(`${UPSTASH_URL}/get/yaemiko_web_locked?t=${timeBuster}`, {
-      headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
-      cache: 'no-store'
-    });
-    const lockData = await lockRes.json();
-    
-    const finalLocked = lockData.result === 'true' || lockData.result === true;
+    const finalLocked = dbLocked === 'true' || dbLocked === true;
 
     const response = NextResponse.json({
       ok: true,
@@ -101,13 +77,9 @@ export async function POST(request: NextRequest) {
     });
 
     response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
-    response.headers.set('Pragma', 'no-cache');
-    response.headers.set('Expires', '0');
-
     return response;
 
   } catch (error) {
-    // Balikin 5 kalau beneran crash, tapi sekarang domainnya udah bener jadi ga bakalan crash
     return NextResponse.json({ ok: true, limit: 5, locked: false });
   }
-          }
+}
