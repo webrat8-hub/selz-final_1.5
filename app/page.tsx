@@ -35,15 +35,13 @@ export default function YaeMikoDashboard() {
     { name: "CRASH ANDROID", code: "forceClose", icon: <Bug className="w-10 h-10 text-orange-500" /> },
   ];
 
-  // --- REFRESH DATA MENGGUNAKAN METHOD POST BERSAMA ACTION GET_DATA ---
   const syncWithCloud = async (action: 'get' | 'set' | 'sendReport', valueToSet?: number, messageText?: string) => {
     try {
       if (action === 'get') {
-        const res = await fetch('/api/control', {
+        const res = await fetch(`/api/control?update=${Date.now()}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'get_data' }),
-          cache: 'no-store'
+          body: JSON.stringify({ action: 'get_data' })
         });
         const data = await res.json();
         
@@ -59,19 +57,17 @@ export default function YaeMikoDashboard() {
         await fetch('/api/control', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'set', valueToSet }),
-          cache: 'no-store'
+          body: JSON.stringify({ action: 'set', valueToSet })
         });
       } else if (action === 'sendReport' && messageText) {
         await fetch('/api/control', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'sendReport', messageText }),
-          cache: 'no-store'
+          body: JSON.stringify({ action: 'sendReport', messageText })
         });
       }
     } catch (err) {
-      console.error("Gagal sinkronisasi data cloud:", err);
+      console.error(err);
     }
   };
 
@@ -83,7 +79,7 @@ export default function YaeMikoDashboard() {
     initData();
   }, []);
 
-  // Auto-refresh lancar tanpa ngeblokir data
+  // Auto-refresh aman karena jalurnya sudah bersih total dari bot
   useEffect(() => {
     const autoRefresh = setInterval(async () => {
       await syncWithCloud('get');
@@ -117,12 +113,11 @@ export default function YaeMikoDashboard() {
     if (username === "Selz" && password === "Freebug") {
       setIsLoggedIn(true);
       setShowErrorOverlay(false);
-      
-      const logMsg = `🔔 *LAPORAN LOGIN DASHBOARD*\n\n👤 *User:* ${username}\n🔑 *Status:* Berhasil Masuk Web\n⏰ *Waktu:* ${new Date().toLocaleString('id-ID')} WIB`;
+      const logMsg = `🔔 *LAPORAN LOGIN DASHBOARD*\n\n👤 *User:* ${username}\n🔑 *Status:* Berhasil Masuk Web`;
       await syncWithCloud('sendReport', undefined, logMsg);
     } else {
       setShowErrorOverlay(true);
-      const alertMsg = `⚠️ *PERCOBAAN LOGIN GAGAL!*\n\n👤 *Username input:* ${username || 'Kosong'}\n🔑 *Password input:* ${password || 'Kosong'}\n🚨 *Peringatan:* Ada dongo yang coba asal nebak pass web lu!`;
+      const alertMsg = `⚠️ *PERCOBAAN LOGIN GAGAL!*\n\n👤 *Username input:* ${username || 'Kosong'}\n🔑 *Password input:* ${password || 'Kosong'}`;
       await syncWithCloud('sendReport', undefined, alertMsg);
     }
   };
@@ -145,7 +140,7 @@ export default function YaeMikoDashboard() {
     const delay = engineSpeed === "Instant" ? 1000 : engineSpeed === "Fast" ? 2500 : 4000;
     const selectedBug = BUG_TYPES[activeNav].name;
     
-    // Langsung tembak set data ke DB tanpa nunggu/tanpa bikin delay tombol
+    // Kirim data langsung ke DB (Instant, No Delay)
     syncWithCloud('set', nextLimit);
 
     setTimeout(async () => { 
@@ -178,7 +173,6 @@ export default function YaeMikoDashboard() {
 
   return (
     <div className={`relative min-h-screen bg-black text-white overflow-hidden transition-opacity duration-500 ${isStealth ? 'opacity-30' : 'opacity-100'}`}>
-      
       <div className="fixed inset-0 z-0">
         <video autoPlay loop muted playsInline className="w-full h-full object-cover opacity-40"><source src="/bg-anime.mp4" type="video/mp4" /></video>
         <div className="absolute inset-0 bg-gradient-to-b from-[#050b14]/70 to-black"></div>
@@ -320,4 +314,4 @@ export default function YaeMikoDashboard() {
       `}</style>
     </div>
   )
-          }
+     }
