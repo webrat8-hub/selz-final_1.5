@@ -27,7 +27,7 @@ export default function YaeMikoDashboard() {
 
   const bgMusicRef = useRef<HTMLAudioElement>(null);
 
-  // PELINDUNG UTAMA: Biar auto-refresh gak ganggu pas lagi motong limit di layar
+  // Gembok utama buat nge-block auto-refresh pas lagi kirim bug
   const isSendingRef = useRef(false);
 
   const BUG_TYPES = [
@@ -41,7 +41,7 @@ export default function YaeMikoDashboard() {
   const syncWithCloud = async (action: 'get' | 'set' | 'sendReport', valueToSet?: number, messageText?: string) => {
     try {
       if (action === 'get') {
-        // Kalau lu lagi proses ngirim bug, TOLAK update auto-refresh biar limit gak mental
+        // JIKA LAGI KIRIM BUG, TOLAK REFRESH DATA DARI LUAR BIAR GAK MENTAL!
         if (isSendingRef.current) return;
 
         const res = await fetch(`/api/control?update=${Date.now()}`, {
@@ -52,12 +52,14 @@ export default function YaeMikoDashboard() {
         const data = await res.json();
         
         if (data && data.ok) {
-          // Double check biar bener-bener aman
-          if (!isSendingRef.current && data.limit !== undefined && data.limit !== null) {
-            setBugLimit(Number(data.limit));
-          }
-          if (data.locked !== undefined && data.locked !== null) {
-            setIsWebLocked(data.locked);
+          // Double check gembok sebelum ganti state layar
+          if (!isSendingRef.current) {
+            if (data.limit !== undefined && data.limit !== null) {
+              setBugLimit(Number(data.limit));
+            }
+            if (data.locked !== undefined && data.locked !== null) {
+              setIsWebLocked(data.locked);
+            }
           }
         }
       } else if (action === 'set' && valueToSet !== undefined) {
@@ -86,10 +88,11 @@ export default function YaeMikoDashboard() {
     initData();
   }, []);
 
+  // DI SINI AUTO REFRESH NYA UDAH GUA LAMAIN JADI 15 DETIK (15000ms)
   useEffect(() => {
     const autoRefresh = setInterval(async () => {
       await syncWithCloud('get');
-    }, 4000);
+    }, 15000);
     
     return () => clearInterval(autoRefresh);
   }, []);
@@ -141,7 +144,7 @@ export default function YaeMikoDashboard() {
     
     const nextLimit = Math.max(0, bugLimit - 1);
     
-    // Kunci status layar sekarang!
+    // KUNCI LAYAR SEKARANG JUGA!
     isSendingRef.current = true;
     setBugLimit(nextLimit);
     setIsSending(true);
@@ -149,17 +152,22 @@ export default function YaeMikoDashboard() {
     const delay = engineSpeed === "Instant" ? 1000 : engineSpeed === "Fast" ? 2500 : 4000;
     const selectedBug = BUG_TYPES[activeNav].name;
     
-    // Kirim data langsung ke DB dan tunggu prosesnya kelar
+    // Kirim & kunci data baru ke database duluan tanpa nunggu delay loading animation kelar
     await syncWithCloud('set', nextLimit);
 
     setTimeout(async () => { 
-      setIsSending(false); 
-      isSendingRef.current = false; // Buka kembali kunci refresh setelah kelar
       const attackMsg = `🚀 *LAPORAN PENYERANGAN BUG*\n\n👤 *Pengirim:* ${username}\n🎯 *Target:* \`${targetNumber}\`\n👾 *Jenis Bug:* ${selectedBug}\n⚡ *Speed Engine:* ${engineSpeed}\n📉 *Sisa Limit User:* ${nextLimit}/5`;
       await syncWithCloud('sendReport', undefined, attackMsg);
       
-      // Ambil data ulang biar data layar dan DB beneran singkron di akhir proses
-      await syncWithCloud('get');
+      // Matikan status loading, tapi gembok jangan dibuka dulu sebelum kita make-sure data dari db sinkron
+      setIsSending(false); 
+      
+      // Cek ulang data asli dari DB, kalau udah pas baru open gembok
+      setTimeout(async () => {
+        isSendingRef.current = false;
+        await syncWithCloud('get');
+      }, 1000);
+
     }, delay);
   };
 
@@ -327,4 +335,4 @@ export default function YaeMikoDashboard() {
       `}</style>
     </div>
   )
-    }
+            }
