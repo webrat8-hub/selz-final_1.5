@@ -10,57 +10,56 @@ const redis = new Redis({
   token: 'jUk8Nw2m7bOcfrxjpkAwA825ncyYyWP2',
 });
 
-// ==========================================
-// JALUR 1: AMBIL DATA (GET) - ANTI CACHE VERCEL EDGE
-// ==========================================
-export async function GET() {
-  try {
-    const dbLimit = await redis.get('yaemiko_bug_limit');
-    const dbLocked = await redis.get('yaemiko_web_locked');
-    
-    let finalLimit = 5;
-    if (dbLimit !== null && dbLimit !== undefined) {
-      finalLimit = Number(dbLimit);
-    }
-
-    const finalLocked = dbLocked === 'true' || dbLocked === true;
-
-    const response = NextResponse.json({
-      ok: true,
-      limit: finalLimit,
-      locked: finalLocked
-    });
-
-    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
-    response.headers.set('Pragma', 'no-cache');
-    response.headers.set('Expires', '0');
-    return response;
-  } catch (error) {
-    return NextResponse.json({ ok: true, limit: 5, locked: false });
-  }
-}
-
-// ==========================================
-// JALUR 2: UBAH DATA (POST)
-// ==========================================
 export async function POST(request: NextRequest) {
+  // Set header anti-cache paling ketat di level Vercel Server
+  const responseHeaders = new Headers({
+    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+    'Pragma': 'no-cache',
+    'Expires': '0',
+  });
+
   try {
     const body = await request.json().catch(() => ({}));
     const { action, valueToSet, messageText } = body;
 
+    // --- JALUR AMBIL DATA (SINKRONISASI WEB) ---
+    if (action === 'get_data') {
+      const dbLimit = await redis.get('yaemiko_bug_limit');
+      const dbLocked = await redis.get('yaemiko_web_locked');
+      
+      let finalLimit = 5;
+      if (dbLimit !== null && dbLimit !== undefined) {
+        finalLimit = Number(dbLimit);
+      }
+
+      const finalLocked = dbLocked === 'true' || dbLocked === true || dbLocked === '"true"';
+
+      return NextResponse.json({
+        ok: true,
+        limit: finalLimit,
+        locked: finalLocked
+      }, { headers: responseHeaders });
+    }
+
+    // --- JALUR UTILITY BOT & WEB SET ---
     if (action === 'botLockWeb') {
       await redis.set('yaemiko_web_locked', 'true');
-      return NextResponse.json({ ok: true, message: "Web Locked!" });
+      return NextResponse.json({ ok: true, message: "Web Locked!" }, { headers: responseHeaders });
     }
 
     if (action === 'botUnlockWeb') {
       await redis.set('yaemiko_web_locked', 'false');
-      return NextResponse.json({ ok: true, message: "Web Unlocked!" });
+      return NextResponse.json({ ok: true, message: "Web Unlocked!" }, { headers: responseHeaders });
     }
 
     if (action === 'botResetLimit') {
       await redis.set('yaemiko_bug_limit', 5);
-      return NextResponse.json({ ok: true, message: "Limit Reset ke 5!" });
+      return NextResponse.json({ ok: true, message: "Limit Reset ke 5!" }, { headers: responseHeaders });
+    }
+
+    if (action === 'set' && valueToSet !== undefined) {
+      await redis.set('yaemiko_bug_limit', valueToSet);
+      return NextResponse.json({ ok: true }, { headers: responseHeaders });
     }
 
     if (action === 'sendReport' && messageText) {
@@ -72,16 +71,11 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({ chat_id: CHAT_ID, text: messageText, parse_mode: 'Markdown' }),
         cache: 'no-store'
       });
-      return NextResponse.json({ ok: true });
+      return NextResponse.json({ ok: true }, { headers: responseHeaders });
     }
 
-    if (action === 'set' && valueToSet !== undefined) {
-      await redis.set('yaemiko_bug_limit', valueToSet);
-      return NextResponse.json({ ok: true });
-    }
-
-    return NextResponse.json({ ok: false, error: "Action not found" });
+    return NextResponse.json({ ok: false, error: "Action not found" }, { headers: responseHeaders });
   } catch (error) {
-    return NextResponse.json({ ok: false, error: "Internal Error" });
+    return NextResponse.json({ ok: true, limit: 5, locked: false }, { headers: responseHeaders });
   }
-  }
+}
