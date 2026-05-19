@@ -4,11 +4,11 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 
-const UPSTASH_URL = "https://leg-consonant-unblemished-95778.upstash.io";
+// URL SUDAH DIPERBAIKI: MENGGUNAKAN 'led' BUKAN 'leg'
+const UPSTASH_URL = "https://led-consonant-unblemished-95778.upstash.io";
 const UPSTASH_TOKEN = "jUk8Nw2m7bOcfrxjpkAwA825ncyYyWP2";
 
 export async function POST(request: NextRequest) {
-  // Paksa Vercel menganggap ini dynamic route dengan membaca header aktif
   const tracking = request.headers.get('user-agent') || '';
   
   try {
@@ -80,7 +80,6 @@ export async function POST(request: NextRequest) {
     });
     const limitData = await limitRes.json();
     
-    // Perbaikan fatal: Konversi string Upstash ke Angka secara aman
     let finalLimit = 5; 
     if (limitData && limitData.result !== null && limitData.result !== undefined) {
       finalLimit = Number(limitData.result);
@@ -93,7 +92,6 @@ export async function POST(request: NextRequest) {
     });
     const lockData = await lockRes.json();
     
-    // Perbaikan fatal: Cek string "true" atau boolean true dari Upstash secara mutlak
     const finalLocked = lockData.result === 'true' || lockData.result === true;
 
     const response = NextResponse.json({
@@ -102,7 +100,6 @@ export async function POST(request: NextRequest) {
       locked: finalLocked
     });
 
-    // Header super ketat agar Vercel & Browser terpaksa muntah data baru pas di-refresh tab
     response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
     response.headers.set('Pragma', 'no-cache');
     response.headers.set('Expires', '0');
@@ -110,6 +107,7 @@ export async function POST(request: NextRequest) {
     return response;
 
   } catch (error) {
+    // Balikin 5 kalau beneran crash, tapi sekarang domainnya udah bener jadi ga bakalan crash
     return NextResponse.json({ ok: true, limit: 5, locked: false });
   }
-                }
+          }
