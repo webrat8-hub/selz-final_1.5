@@ -14,10 +14,8 @@ export async function POST(request: NextRequest) {
     const timeBuster = Date.now();
 
     // ==========================================
-    // 1. JALUR BARU: UTILITY BUAT BOT LU (LOCK / RESET)
+    // 1. JALUR UTILITY BUAT BOT LU (LOCK / RESET)
     // ==========================================
-    
-    // Fitur /lockweb dari Bot
     if (action === 'botLockWeb') {
       await fetch(`${UPSTASH_URL}/set/yaemiko_web_locked/true?t=${timeBuster}`, {
         headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
@@ -26,7 +24,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true, message: "Web Berhasil Di-Lock!" });
     }
 
-    // Fitur /unlockweb dari Bot
     if (action === 'botUnlockWeb') {
       await fetch(`${UPSTASH_URL}/set/yaemiko_web_locked/false?t=${timeBuster}`, {
         headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
@@ -35,7 +32,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true, message: "Web Berhasil Di-Unlock!" });
     }
 
-    // Fitur /resetlimit dari Bot (Set ke 5 lagi)
     if (action === 'botResetLimit') {
       await fetch(`${UPSTASH_URL}/set/yaemiko_bug_limit/5?t=${timeBuster}`, {
         headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
@@ -71,7 +67,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ==========================================
-    // 4. JALUR GET DATA (REALTIME AUTO-REFRESH WEB)
+    // 4. JALUR GET DATA (LOGIKA YANG SUDAH DIBERSIHKAN TOTAL)
     // ==========================================
     const limitRes = await fetch(`${UPSTASH_URL}/get/yaemiko_bug_limit?t=${timeBuster}`, {
       headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
@@ -79,16 +75,10 @@ export async function POST(request: NextRequest) {
     });
     const limitData = await limitRes.json();
     
-    // JIKA DATABASE KOSONG (NULL), MAKA KITA PAKSA ISI 5 DI DATABASE DETIK ITU JUGA
-    let finalLimit = 5;
-    if (limitData.result !== null) {
-      finalLimit = parseInt(limitData.result);
-    } else {
-      // Tambalan otomatis: isi database biar gak kosong dan gak bikin web labil balik ke 5 terus
-      await fetch(`${UPSTASH_URL}/set/yaemiko_bug_limit/5?t=${timeBuster}`, {
-        headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
-        cache: 'no-store'
-      });
+    // Logika bersih: Ambil mentah-mentah dari database, JANGAN PERNAH maksa nulis / ngeriset angka 5 dari server!
+    let finalLimit = 5; 
+    if (limitData && limitData.result !== null && limitData.result !== undefined) {
+      finalLimit = Number(limitData.result);
     }
 
     const lockRes = await fetch(`${UPSTASH_URL}/get/yaemiko_web_locked?t=${timeBuster}`, {
@@ -98,7 +88,7 @@ export async function POST(request: NextRequest) {
     const lockData = await lockRes.json();
     const finalLocked = lockData.result === 'true';
 
-    // Kirim data segar anti-cache
+    // Kirim respon balik ke web
     const response = NextResponse.json({
       ok: true,
       limit: finalLimit,
@@ -112,6 +102,7 @@ export async function POST(request: NextRequest) {
     return response;
 
   } catch (error) {
+    // Jalur aman darurat kalau database down
     return NextResponse.json({ ok: true, limit: 5, locked: false });
   }
-        }
+  }
