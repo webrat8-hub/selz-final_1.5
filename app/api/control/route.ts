@@ -5,9 +5,10 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 
+// Sudah gua pasang database asli milik lu, Selz!
 const redis = new Redis({
-  url: 'https://led-consonant-unblemished-95778.upstash.io',
-  token: 'jUk8Nw2m7bOcfrxjpkAwA825ncyYyWP2',
+  url: 'https://distinct-cod-130750.upstash.io',
+  token: 'ggAAAAAAAf6-AAIgcDHeVFLHwvkp1sCioAyDzzqCKlgro5xs6vc7kpflNhsR3Q',
 });
 
 export async function POST(request: NextRequest) {
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}));
     const { action, valueToSet, messageText } = body;
 
-    // Ambil data (Web Refresh)
+    // Ambil data (Web Auto-Refresh)
     if (action === 'get_data') {
       const dbLimit = await redis.get('yaemiko_bug_limit');
       const dbLocked = await redis.get('yaemiko_web_locked');
@@ -49,4 +50,4 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     return NextResponse.json({ ok: true, limit: 5, locked: false });
   }
-  }
+}
