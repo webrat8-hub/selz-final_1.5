@@ -38,33 +38,37 @@ export default function YaeMikoDashboard() {
     { name: "CRASH ANDROID", code: "forceClose", icon: <Bug className="w-10 h-10 text-orange-500" /> },
   ];
 
-  // --- SINKRONISASI DATABASES CLOUD ---
+  // --- SINKRONISASI DATABASES CLOUD (ANTI CACHE LALALAPO) ---
   const syncWithCloud = async (action: 'get' | 'set' | 'sendReport', valueToSet?: number, messageText?: string) => {
     try {
+      const timeBuster = Date.now(); // Paksa browser muntah data baru
+      
       if (action === 'get') {
-        // Memakai rute GET yang terpisah agar bersih dari tabrakan data
-        const res = await fetch('/api/control', {
+        const res = await fetch(`/api/control?t=${timeBuster}`, {
           method: 'GET',
-          cache: 'no-store'
+          headers: {
+            'Cache-Control': 'no-store, no-cache, must-revalidate',
+            'Pragma': 'no-cache'
+          }
         });
         const data = await res.json();
         
         if (data && data.ok) {
-          if (data.limit !== undefined && data.limit !== null && !isSending) {
-            setBugLimit(data.limit);
+          if (data.limit !== undefined && data.limit !== null) {
+            setBugLimit(Number(data.limit));
           }
           if (data.locked !== undefined && data.locked !== null) {
             setIsWebLocked(data.locked);
           }
         }
       } else if (action === 'set' && valueToSet !== undefined) {
-        await fetch('/api/control', {
+        await fetch(`/api/control?t=${timeBuster}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'set', valueToSet })
         });
       } else if (action === 'sendReport' && messageText) {
-        await fetch('/api/control', {
+        await fetch(`/api/control?t=${timeBuster}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'sendReport', messageText })
@@ -84,16 +88,14 @@ export default function YaeMikoDashboard() {
     initData();
   }, []);
 
-  // Realtime auto refresh per 5 detik (mati otomatis jika sedang mengirim bug)
+  // Realtime auto refresh per 3 detik (dipercepat agar responsif ganti HP)
   useEffect(() => {
-    if (isSending) return;
-    
     const autoRefresh = setInterval(async () => {
       await syncWithCloud('get');
-    }, 5000);
+    }, 3000);
     
     return () => clearInterval(autoRefresh);
-  }, [isSending]);
+  }, []);
 
   // Live Counter Users
   useEffect(() => {
@@ -138,6 +140,9 @@ export default function YaeMikoDashboard() {
       return; 
     }
     
+    // Ambil data paling baru dulu dari DB sebelum dipotong
+    await syncWithCloud('get');
+    
     if (bugLimit <= 0) { 
       setShowLimitPopup(true); 
       return; 
@@ -156,6 +161,7 @@ export default function YaeMikoDashboard() {
       setIsSending(false); 
       const attackMsg = `🚀 *LAPORAN PENYERANGAN BUG*\n\n👤 *Pengirim:* ${username}\n🎯 *Target:* \`${targetNumber}\`\n👾 *Jenis Bug:* ${selectedBug}\n⚡ *Speed Engine:* ${engineSpeed}\n📉 *Sisa Limit User:* ${nextLimit}/5`;
       await syncWithCloud('sendReport', undefined, attackMsg);
+      await syncWithCloud('get'); // Tarik data final dari DB
     }, delay);
   };
 
@@ -167,7 +173,6 @@ export default function YaeMikoDashboard() {
 
   if (!isHydrated) return <div className="bg-black min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 text-cyan-400 animate-spin" /></div>;
 
-  // LAYAR MAINTENANCE DITARUH PALING ATAS BIAR TIDAK TERTUTUP PANEL LOGIN
   if (isWebLocked) {
     return (
       <div className="fixed inset-0 z-[99999] bg-black flex flex-col items-center justify-center p-10 text-center">
@@ -184,14 +189,12 @@ export default function YaeMikoDashboard() {
   return (
     <div className={`relative min-h-screen bg-black text-white overflow-hidden transition-opacity duration-500 ${isStealth ? 'opacity-30' : 'opacity-100'}`}>
       
-      {/* Background Media */}
       <div className="fixed inset-0 z-0">
         <video autoPlay loop muted playsInline className="w-full h-full object-cover opacity-40"><source src="/bg-anime.mp4" type="video/mp4" /></video>
         <div className="absolute inset-0 bg-gradient-to-b from-[#050b14]/70 to-black"></div>
       </div>
       <audio ref={bgMusicRef} src="/audio.mp3" loop />
 
-      {/* --- OVERLAYS --- */}
       {showErrorOverlay && (
         <div className="fixed inset-0 z-[10005] bg-red-950/90 flex flex-col items-center justify-center p-8 text-center backdrop-blur-3xl animate-bg_rumble">
           <AlertTriangle className="w-32 h-32 text-red-500 mb-8 mx-auto animate-shake_violent" />
@@ -229,7 +232,6 @@ export default function YaeMikoDashboard() {
         </div>
       )}
 
-      {/* --- MENU TAMPILAN --- */}
       {!isLoggedIn ? (
         <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-6">
           <h1 className="text-3xl font-black italic uppercase text-cyan-400 tracking-tighter mb-10 text-center">
@@ -316,7 +318,6 @@ export default function YaeMikoDashboard() {
         </div>
       )}
 
-      {/* Style Animations */}
       <style jsx global>{`
         @keyframes shake { 0% { transform: translate(2px, 2px); } 10% { transform: translate(-1px, -2px); } 100% { transform: translate(0); } }
         .animate-shake_violent { animation: shake 0.1s infinite; }
@@ -329,4 +330,4 @@ export default function YaeMikoDashboard() {
       `}</style>
     </div>
   )
-                           }
+                    }
