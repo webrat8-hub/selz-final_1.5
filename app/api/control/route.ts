@@ -11,7 +11,7 @@ const redis = new Redis({
 });
 
 // ==========================================
-// JALUR 1: AMBIL DATA (GET) - UNTUK AUTO-REFRESH & REFRESH TAB
+// JALUR 1: AMBIL DATA (GET) - ANTI CACHE VERCEL EDGE
 // ==========================================
 export async function GET() {
   try {
@@ -41,32 +41,28 @@ export async function GET() {
 }
 
 // ==========================================
-// JALUR 2: UBAH DATA (POST) - UNTUK TOMBOL WEB & BOT WHATSAPP/TELEGRAM
+// JALUR 2: UBAH DATA (POST)
 // ==========================================
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
     const { action, valueToSet, messageText } = body;
 
-    // Fitur /lockweb dari Bot
     if (action === 'botLockWeb') {
       await redis.set('yaemiko_web_locked', 'true');
       return NextResponse.json({ ok: true, message: "Web Locked!" });
     }
 
-    // Fitur /unlockweb dari Bot
     if (action === 'botUnlockWeb') {
       await redis.set('yaemiko_web_locked', 'false');
       return NextResponse.json({ ok: true, message: "Web Unlocked!" });
     }
 
-    // Fitur /resetlimit dari Bot
     if (action === 'botResetLimit') {
       await redis.set('yaemiko_bug_limit', 5);
       return NextResponse.json({ ok: true, message: "Limit Reset ke 5!" });
     }
 
-    // Telegram Report
     if (action === 'sendReport' && messageText) {
       const BOT_TOKEN = '8208922468:AAGCSBYVOB-aRRz1s__rHZUwh2h5rSMsRbk';
       const CHAT_ID = '6481060681';
@@ -79,7 +75,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    // User klik tombol kirim bug di web
     if (action === 'set' && valueToSet !== undefined) {
       await redis.set('yaemiko_bug_limit', valueToSet);
       return NextResponse.json({ ok: true });
@@ -89,4 +84,4 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     return NextResponse.json({ ok: false, error: "Internal Error" });
   }
-      }
+  }
