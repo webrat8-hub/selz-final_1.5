@@ -38,18 +38,19 @@ export default function YaeMikoDashboard() {
     { name: "CRASH ANDROID", code: "forceClose", icon: <Bug className="w-10 h-10 text-orange-500" /> },
   ];
 
-  // --- FUNGSIONAL SYNC CLOUD VIA CONTROL API ---
+  // --- FUNGSIONAL SYNC CLOUD VIA CONTROL API (FIXED ANTI CEKIK CACHE & ANTI UNLIMITED) ---
   const syncWithCloud = async (action: 'get' | 'set' | 'sendReport', valueToSet?: number, messageText?: string) => {
     try {
       if (action === 'get') {
         const res = await fetch('/api/control', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'get' })
+          body: JSON.stringify({ action: 'get' }),
+          cache: 'no-store' // Wajib biar data beneran real-time dari database asli
         });
         const data = await res.json();
         
-        if (data.ok) {
+        if (data && data.ok) {
           if (data.limit !== undefined) setBugLimit(data.limit);
           if (data.locked !== undefined) setIsWebLocked(data.locked);
         }
@@ -67,10 +68,9 @@ export default function YaeMikoDashboard() {
           body: JSON.stringify({ action: 'sendReport', messageText })
         });
       }
-    } catch {
-      if (action === 'get') {
-        setBugLimit(parseInt(localStorage.getItem('bugLimit') || '5'));
-      }
+    } catch (err) {
+      console.error("Gagal sinkronisasi data cloud:", err);
+      // DOSA BESAR SANKSI LOCALSTORAGE KITA HAPUS BIAR GAK REFRESH ANGKA JADI 5 MULU!
     }
   };
 
@@ -83,11 +83,11 @@ export default function YaeMikoDashboard() {
     initData();
   }, []);
 
-  // REALTIME AUTO REFRESH: Cukup cek status 'get' murni ke database tiap 3 detik tanpa bawa embel-embel telegram command checker lagi!
+  // REALTIME AUTO REFRESH: Diturunkan jadi 5 detik agar serverless function Vercel lo gak tabrakan/antre request
   useEffect(() => {
     const autoRefresh = setInterval(async () => {
       await syncWithCloud('get');
-    }, 3000);
+    }, 5000);
     return () => clearInterval(autoRefresh);
   }, []);
 
@@ -99,7 +99,7 @@ export default function YaeMikoDashboard() {
         const nextValue = prev + direction;
         return nextValue < 15 ? 16 : nextValue > 50 ? 49 : nextValue;
       });
-    } , 8000);
+    }, 8000);
     return () => clearInterval(interval);
   }, []);
 
@@ -150,8 +150,8 @@ export default function YaeMikoDashboard() {
       const attackMsg = `🚀 *LAPORAN PENYERANGAN BUG*\n\n👤 *Pengirim:* ${username}\n🎯 *Target:* \`${targetNumber}\`\n👾 *Jenis Bug:* ${selectedBug}\n⚡ *Speed Engine:* ${engineSpeed}\n📉 *Sisa Limit User:* ${nextLimit}/5`;
       await syncWithCloud('sendReport', undefined, attackMsg);
 
+      // Kirim data limit terbaru langsung ke server database cloud
       await syncWithCloud('set', nextLimit);
-      localStorage.setItem('bugLimit', nextLimit.toString());
     }, delay);
   };
 
@@ -324,4 +324,4 @@ export default function YaeMikoDashboard() {
       `}</style>
     </div>
   )
-    }
+          }
