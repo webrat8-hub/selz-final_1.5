@@ -6,7 +6,7 @@ import { Shield, Bug, LayoutDashboard, Settings, Loader2, Music, ChevronLeft, Ch
 export default function YaeMikoDashboard() {
   // --- 1. CLOUD PERSISTENCE STATES ---
   const [isHydrated, setIsHydrated] = useState(false);
-  const [bugLimit, setBugLimit] = useState(0); 
+  const [bugLimit, setBugLimit] = useState(5); // Default awal 5 sebelum sync
   const [isWebLocked, setIsWebLocked] = useState(false);
 
   // --- 2. REGULAR STATES ---
@@ -38,7 +38,7 @@ export default function YaeMikoDashboard() {
     { name: "CRASH ANDROID", code: "forceClose", icon: <Bug className="w-10 h-10 text-orange-500" /> },
   ];
 
-  // --- FUNGSIONAL SYNC CLOUD VIA CONTROL API ---
+  // --- SINKRONISASI DATABASES CLOUD ---
   const syncWithCloud = async (action: 'get' | 'set' | 'sendReport', valueToSet?: number, messageText?: string) => {
     try {
       if (action === 'get') {
@@ -51,10 +51,13 @@ export default function YaeMikoDashboard() {
         const data = await res.json();
         
         if (data && data.ok) {
-          // Hanya update limit dari database kalau user TIDAK sedang dalam proses mengirim bug
-          // Biar data di layar gak ketimpa data lama pas proses ngirim!
-          if (data.limit !== undefined && !isSending) setBugLimit(data.limit);
-          if (data.locked !== undefined) setIsWebLocked(data.locked);
+          // JANGAN TIMPA LIMIT DI LAYAR KALAU API BALIKIN DATA KOSONG ATAU SEDANG KIRIM BUG
+          if (data.limit !== undefined && data.limit !== null && !isSending) {
+            setBugLimit(data.limit);
+          }
+          if (data.locked !== undefined && data.locked !== null) {
+            setIsWebLocked(data.locked);
+          }
         }
       } else if (action === 'set' && valueToSet !== undefined) {
         await fetch('/api/control', {
@@ -74,7 +77,7 @@ export default function YaeMikoDashboard() {
     }
   };
 
-  // --- AMBIL DATA SAAT STARTUP ---
+  // AMBIL DATA AWAL PERTAMA KALI WEB DIBUKA
   useEffect(() => {
     async function initData() {
       await syncWithCloud('get');
@@ -83,14 +86,14 @@ export default function YaeMikoDashboard() {
     initData();
   }, []);
 
-  // REALTIME AUTO REFRESH
+  // REALTIME AUTO REFRESH PER 5 DETIK (MATI TOTAL PAS LAGI SENDING)
   useEffect(() => {
+    if (isSending) return; // Stop total interval pas lagi ngirim bug
+    
     const autoRefresh = setInterval(async () => {
-      // Kalau lagi ngirim bug, stop auto-refresh sementara biar gak balapan data!
-      if (!isSending) {
-        await syncWithCloud('get');
-      }
-    }, 4000);
+      await syncWithCloud('get');
+    }, 5000);
+    
     return () => clearInterval(autoRefresh);
   }, [isSending]);
 
@@ -131,7 +134,6 @@ export default function YaeMikoDashboard() {
     }
   };
 
-  // --- LOGIKA BARU ANTI REFRESH UNLIMITED (SANGAT KETAT) ---
   const handleSendBug = async () => {
     if (targetNumber === "6289505198913") { 
       setShowRestrictedOverlay(true); 
@@ -143,7 +145,7 @@ export default function YaeMikoDashboard() {
       return; 
     }
     
-    // 1. Potong limit di layar LANGSUNG biar user free gak bisa spam klik!
+    // Potong limit di layar secara instan biar gak bisa dispam klik
     const nextLimit = Math.max(0, bugLimit - 1);
     setBugLimit(nextLimit);
     setIsSending(true);
@@ -151,7 +153,7 @@ export default function YaeMikoDashboard() {
     const delay = engineSpeed === "Instant" ? 1000 : engineSpeed === "Fast" ? 2500 : 4000;
     const selectedBug = BUG_TYPES[activeNav].name;
     
-    // 2. Langsung set data limit terbaru ke DATABASE secepatnya tanpa nunggu delay selesai!
+    // Kirim data limit terbaru langsung ke server database cloud detik itu juga
     await syncWithCloud('set', nextLimit);
 
     setTimeout(async () => { 
@@ -169,6 +171,9 @@ export default function YaeMikoDashboard() {
 
   if (!isHydrated) return <div className="bg-black min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 text-cyan-400 animate-spin" /></div>;
 
+  // ==========================================
+  // PERUBAHAN UTAMA: LAYAR LOCK DI TAROH PALING ATAS BIAR GAK KETUTUP FORM LOGIN
+  // ==========================================
   if (isWebLocked) {
     return (
       <div className="fixed inset-0 z-[99999] bg-black flex flex-col items-center justify-center p-10 text-center">
@@ -230,7 +235,7 @@ export default function YaeMikoDashboard() {
         </div>
       )}
 
-      {/* --- CONTENT --- */}
+      {/* --- HALAMAN UTAMA --- */}
       {!isLoggedIn ? (
         <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-6">
           <h1 className="text-3xl font-black italic uppercase text-cyan-400 tracking-tighter mb-10 text-center">
@@ -330,4 +335,4 @@ export default function YaeMikoDashboard() {
       `}</style>
     </div>
   )
-      }
+              }
