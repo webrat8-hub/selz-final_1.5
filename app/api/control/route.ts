@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-// Fungsi teruji nembak Upstash Redis secara langsung
+// Fungsi nembak Upstash Redis secara direct via Fetch API
 async function runRedis(command: string[]) {
   try {
     const url = "https://leg-consonant-unblemished-95778.upstash.io";
@@ -16,7 +16,7 @@ async function runRedis(command: string[]) {
     const data = await res.json();
     return data.result;
   } catch (err) {
-    console.error("Gagal koneksi Redis:", err);
+    console.error("Redis Error:", err);
     return null;
   }
 }
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => ({}));
     const { action, valueToSet, messageText } = body;
 
-    // JALUR LALU LINTAS 1: Fitur ngirim laporan (Login / Serangan Bug) ke Bot Telegram
+    // JALUR 1: Mengirim laporan ke bot Telegram lo (Login & Serangan Bug)
     if (action === 'sendReport' && messageText) {
       const BOT_TOKEN = '8208922468:AAGCSBYVOB-aRRz1s__rHZUwh2h5rSMsRbk';
       const CHAT_ID = '6481060681';
@@ -43,22 +43,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true });
     }
 
-    // JALUR LALU LINTAS 2: Saat web ngubah limit sehabis klik tombol "KIRIM BUG"
+    // JALUR 2: Saat user klik tombol kirim bug, web bakal ngeset limit baru ke Redis
     if (action === 'set' && valueToSet !== undefined) {
       await runRedis(['SET', 'yaemiko_bug_limit', valueToSet.toString()]);
       return NextResponse.json({ ok: true });
     }
 
-    // JALUR LALU LINTAS 3: Ambil data realtime (Setiap 3 detik di-trigger oleh page.tsx lo)
-    // Membaca sisa limit harian
+    // JALUR 3: SINKRONISASI REALTIME (Aksi 'get' yang jalan tiap 3 detik dari web lo)
+    // 1. Ambil status kunci web
+    const isLocked = await runRedis(['GET', 'yaemiko_web_locked']);
+    const finalLocked = isLocked === 'true';
+
+    // 2. Ambil sisa limit harian
     const currentLimit = await runRedis(['GET', 'yaemiko_bug_limit']);
     const finalLimit = currentLimit !== null ? parseInt(currentLimit) : 5;
 
-    // Membaca status kunci website
-    const isLocked = await runRedis(['GET', 'yaemiko_web_locked']);
-    const finalLocked = isLocked === 'true'; // Jika string 'true' maka bernilai true asli
-
-    // Return data dengan format bahasa yang dimengerti oleh page.tsx lo!
+    // BALASAN DATA JALUR AMAN: Harus ada object 'ok', 'limit', dan 'locked' biar dibaca page.tsx!
     return NextResponse.json({
       ok: true,
       limit: finalLimit,
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    // Fallback darurat jika database down biar web gak crash blank hitam
+    // Jika ada kendala, kasih status aman biar web ga langsung crash blank hitam
     return NextResponse.json({ ok: true, limit: 5, locked: false });
   }
   }
