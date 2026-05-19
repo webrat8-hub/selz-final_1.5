@@ -5,7 +5,6 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 
-// Sudah gua pasang database asli milik lu, Selz!
 const redis = new Redis({
   url: 'https://distinct-cod-130750.upstash.io',
   token: 'ggAAAAAAAf6-AAIgcDHeVFLHwvkp1sCioAyDzzqCKlgro5xs6vc7kpflNhsR3Q',
@@ -16,7 +15,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}));
     const { action, valueToSet, messageText } = body;
 
-    // Ambil data (Web Auto-Refresh)
     if (action === 'get_data') {
       const dbLimit = await redis.get('yaemiko_bug_limit');
       const dbLocked = await redis.get('yaemiko_web_locked');
@@ -27,13 +25,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true, limit: finalLimit, locked: finalLocked });
     }
 
-    // Set Limit dari tombol web
     if (action === 'set' && valueToSet !== undefined) {
       await redis.set('yaemiko_bug_limit', valueToSet);
       return NextResponse.json({ ok: true });
     }
 
-    // Kirim Telegram Report
     if (action === 'sendReport' && messageText) {
       const BOT_TOKEN = '8208922468:AAGCSBYVOB-aRRz1s__rHZUwh2h5rSMsRbk';
       const CHAT_ID = '6481060681';
