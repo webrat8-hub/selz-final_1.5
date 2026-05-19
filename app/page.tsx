@@ -6,7 +6,7 @@ import { Shield, Bug, LayoutDashboard, Settings, Loader2, Music, ChevronLeft, Ch
 export default function YaeMikoDashboard() {
   // --- 1. CLOUD PERSISTENCE STATES ---
   const [isHydrated, setIsHydrated] = useState(false);
-  const [bugLimit, setBugLimit] = useState(5); // Default awal 5 sebelum sync
+  const [bugLimit, setBugLimit] = useState(5);
   const [isWebLocked, setIsWebLocked] = useState(false);
 
   // --- 2. REGULAR STATES ---
@@ -42,16 +42,14 @@ export default function YaeMikoDashboard() {
   const syncWithCloud = async (action: 'get' | 'set' | 'sendReport', valueToSet?: number, messageText?: string) => {
     try {
       if (action === 'get') {
+        // Memakai rute GET yang terpisah agar bersih dari tabrakan data
         const res = await fetch('/api/control', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'get' }),
+          method: 'GET',
           cache: 'no-store'
         });
         const data = await res.json();
         
         if (data && data.ok) {
-          // JANGAN TIMPA LIMIT DI LAYAR KALAU API BALIKIN DATA KOSONG ATAU SEDANG KIRIM BUG
           if (data.limit !== undefined && data.limit !== null && !isSending) {
             setBugLimit(data.limit);
           }
@@ -77,7 +75,7 @@ export default function YaeMikoDashboard() {
     }
   };
 
-  // AMBIL DATA AWAL PERTAMA KALI WEB DIBUKA
+  // Ambil data pertama kali saat web dibuka
   useEffect(() => {
     async function initData() {
       await syncWithCloud('get');
@@ -86,9 +84,9 @@ export default function YaeMikoDashboard() {
     initData();
   }, []);
 
-  // REALTIME AUTO REFRESH PER 5 DETIK (MATI TOTAL PAS LAGI SENDING)
+  // Realtime auto refresh per 5 detik (mati otomatis jika sedang mengirim bug)
   useEffect(() => {
-    if (isSending) return; // Stop total interval pas lagi ngirim bug
+    if (isSending) return;
     
     const autoRefresh = setInterval(async () => {
       await syncWithCloud('get');
@@ -145,7 +143,6 @@ export default function YaeMikoDashboard() {
       return; 
     }
     
-    // Potong limit di layar secara instan biar gak bisa dispam klik
     const nextLimit = Math.max(0, bugLimit - 1);
     setBugLimit(nextLimit);
     setIsSending(true);
@@ -153,7 +150,6 @@ export default function YaeMikoDashboard() {
     const delay = engineSpeed === "Instant" ? 1000 : engineSpeed === "Fast" ? 2500 : 4000;
     const selectedBug = BUG_TYPES[activeNav].name;
     
-    // Kirim data limit terbaru langsung ke server database cloud detik itu juga
     await syncWithCloud('set', nextLimit);
 
     setTimeout(async () => { 
@@ -171,9 +167,7 @@ export default function YaeMikoDashboard() {
 
   if (!isHydrated) return <div className="bg-black min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 text-cyan-400 animate-spin" /></div>;
 
-  // ==========================================
-  // PERUBAHAN UTAMA: LAYAR LOCK DI TAROH PALING ATAS BIAR GAK KETUTUP FORM LOGIN
-  // ==========================================
+  // LAYAR MAINTENANCE DITARUH PALING ATAS BIAR TIDAK TERTUTUP PANEL LOGIN
   if (isWebLocked) {
     return (
       <div className="fixed inset-0 z-[99999] bg-black flex flex-col items-center justify-center p-10 text-center">
@@ -235,7 +229,7 @@ export default function YaeMikoDashboard() {
         </div>
       )}
 
-      {/* --- HALAMAN UTAMA --- */}
+      {/* --- MENU TAMPILAN --- */}
       {!isLoggedIn ? (
         <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-6">
           <h1 className="text-3xl font-black italic uppercase text-cyan-400 tracking-tighter mb-10 text-center">
@@ -322,7 +316,7 @@ export default function YaeMikoDashboard() {
         </div>
       )}
 
-      {/* Global CSS for Animations */}
+      {/* Style Animations */}
       <style jsx global>{`
         @keyframes shake { 0% { transform: translate(2px, 2px); } 10% { transform: translate(-1px, -2px); } 100% { transform: translate(0); } }
         .animate-shake_violent { animation: shake 0.1s infinite; }
@@ -335,4 +329,4 @@ export default function YaeMikoDashboard() {
       `}</style>
     </div>
   )
-              }
+                           }
