@@ -4,12 +4,10 @@ import React, { useState, useEffect, useRef } from "react"
 import { Shield, Bug, LayoutDashboard, Settings, Loader2, Music, ChevronLeft, ChevronRight, Volume2, VolumeX, Zap, EyeOff, Copy, CheckCircle2, AlertTriangle, ExternalLink, Lock, Ghost, Skull, ZapOff, Activity, Ban } from "lucide-react"
 
 export default function YaeMikoDashboard() {
-  // --- 1. CLOUD PERSISTENCE STATES ---
   const [isHydrated, setIsHydrated] = useState(false);
   const [bugLimit, setBugLimit] = useState(5);
   const [isWebLocked, setIsWebLocked] = useState(false);
 
-  // --- 2. REGULAR STATES ---
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -23,7 +21,6 @@ export default function YaeMikoDashboard() {
   const [isCopied, setIsCopied] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState(38);
 
-  // Overlay States
   const [showErrorOverlay, setShowErrorOverlay] = useState(false);
   const [showLimitPopup, setShowLimitPopup] = useState(false);
   const [showRestrictedOverlay, setShowRestrictedOverlay] = useState(false);
@@ -38,18 +35,15 @@ export default function YaeMikoDashboard() {
     { name: "CRASH ANDROID", code: "forceClose", icon: <Bug className="w-10 h-10 text-orange-500" /> },
   ];
 
-  // --- SINKRONISASI DATABASES CLOUD (ANTI CACHE LALALAPO) ---
+  // --- REFRESH DATA MENGGUNAKAN METHOD POST BERSAMA ACTION GET_DATA ---
   const syncWithCloud = async (action: 'get' | 'set' | 'sendReport', valueToSet?: number, messageText?: string) => {
     try {
-      const timeBuster = Date.now(); // Paksa browser muntah data baru
-      
       if (action === 'get') {
-        const res = await fetch(`/api/control?t=${timeBuster}`, {
-          method: 'GET',
-          headers: {
-            'Cache-Control': 'no-store, no-cache, must-revalidate',
-            'Pragma': 'no-cache'
-          }
+        const res = await fetch('/api/control', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'get_data' }),
+          cache: 'no-store'
         });
         const data = await res.json();
         
@@ -62,16 +56,18 @@ export default function YaeMikoDashboard() {
           }
         }
       } else if (action === 'set' && valueToSet !== undefined) {
-        await fetch(`/api/control?t=${timeBuster}`, {
+        await fetch('/api/control', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'set', valueToSet })
+          body: JSON.stringify({ action: 'set', valueToSet }),
+          cache: 'no-store'
         });
       } else if (action === 'sendReport' && messageText) {
-        await fetch(`/api/control?t=${timeBuster}`, {
+        await fetch('/api/control', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'sendReport', messageText })
+          body: JSON.stringify({ action: 'sendReport', messageText }),
+          cache: 'no-store'
         });
       }
     } catch (err) {
@@ -79,7 +75,6 @@ export default function YaeMikoDashboard() {
     }
   };
 
-  // Ambil data pertama kali saat web dibuka
   useEffect(() => {
     async function initData() {
       await syncWithCloud('get');
@@ -88,16 +83,15 @@ export default function YaeMikoDashboard() {
     initData();
   }, []);
 
-  // Realtime auto refresh per 3 detik (dipercepat agar responsif ganti HP)
+  // Auto-refresh lancar tanpa ngeblokir data
   useEffect(() => {
     const autoRefresh = setInterval(async () => {
       await syncWithCloud('get');
-    }, 3000);
+    }, 4000);
     
     return () => clearInterval(autoRefresh);
   }, []);
 
-  // Live Counter Users
   useEffect(() => {
     const interval = setInterval(() => {
       setOnlineUsers(prev => {
@@ -109,7 +103,6 @@ export default function YaeMikoDashboard() {
     return () => clearInterval(interval);
   }, []);
 
-  // Audio Logic
   useEffect(() => {
     if (bgMusicRef.current && isHydrated) {
       if (isMusicOn && isLoggedIn && !isWebLocked) {
@@ -140,9 +133,6 @@ export default function YaeMikoDashboard() {
       return; 
     }
     
-    // Ambil data paling baru dulu dari DB sebelum dipotong
-    await syncWithCloud('get');
-    
     if (bugLimit <= 0) { 
       setShowLimitPopup(true); 
       return; 
@@ -155,13 +145,13 @@ export default function YaeMikoDashboard() {
     const delay = engineSpeed === "Instant" ? 1000 : engineSpeed === "Fast" ? 2500 : 4000;
     const selectedBug = BUG_TYPES[activeNav].name;
     
-    await syncWithCloud('set', nextLimit);
+    // Langsung tembak set data ke DB tanpa nunggu/tanpa bikin delay tombol
+    syncWithCloud('set', nextLimit);
 
     setTimeout(async () => { 
       setIsSending(false); 
       const attackMsg = `🚀 *LAPORAN PENYERANGAN BUG*\n\n👤 *Pengirim:* ${username}\n🎯 *Target:* \`${targetNumber}\`\n👾 *Jenis Bug:* ${selectedBug}\n⚡ *Speed Engine:* ${engineSpeed}\n📉 *Sisa Limit User:* ${nextLimit}/5`;
       await syncWithCloud('sendReport', undefined, attackMsg);
-      await syncWithCloud('get'); // Tarik data final dari DB
     }, delay);
   };
 
@@ -330,4 +320,4 @@ export default function YaeMikoDashboard() {
       `}</style>
     </div>
   )
-                    }
+          }
