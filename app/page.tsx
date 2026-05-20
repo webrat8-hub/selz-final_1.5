@@ -183,9 +183,9 @@ export default function YaeMikoDashboard() {
     return (
       <div className="fixed inset-0 z-[99999] bg-black flex flex-col items-center justify-center p-10 text-center">
         <Ban className="w-32 h-32 text-red-600 mb-8 mx-auto animate-pulse" />
-        <h1 className="text-4xl font-black italic uppercase text-white tracking-tighter mb-4">⚠️SYSTEM UNDER MAINTENANCE⚠️</h1>
+        <h1 className="text-4xl font-black italic uppercase text-white tracking-tighter mb-4">⚠️SYSTEM⚠️⚠️MAINTENANCE⚠️</h1>
         <p className="text-white/50 text-xs font-bold uppercase tracking-[0.3em] max-w-xs mx-auto">
-          Sabar dongo, web lagi di update sama Selz. Balik lagi nanti kalau udah selesai update nya.
+          Sabar dongo, lagi di update sama Selz. Balik lagi nanti kalau udah selesai update nya.
         </p>
         <Loader2 className="w-4 h-4 text-red-600 animate-spin mt-10" />
       </div>
