@@ -4,13 +4,20 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 
-// Ambil data via REST API agar sinkronisasi instan terjamin
 async function runRedis(command: string[]) {
   try {
     const url = "https://distinct-cod-130750.upstash.io";
     const token = "ggAAAAAAAf6-AAIgcDHeVFLHwvkp1sCioAyDzzqCKlgro5xs6vc7kpflNhsR3Q";
+    
+    // PERBAIKAN 1: Tambahkan cache bypass total di level fetch database
     const res = await fetch(`${url}/${command.join('/')}`, {
-      headers: { Authorization: `Bearer ${token}` },
+      method: 'GET',
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      },
       cache: 'no-store'
     });
     return await res.json();
@@ -29,14 +36,28 @@ export async function POST(request: NextRequest) {
       const resLimit = await runRedis(['GET', 'yaemiko_bug_limit']);
       const resLocked = await runRedis(['GET', 'yaemiko_web_locked']);
       
-      const dbLimit = resLimit ? resLimit.result : null;
-      const dbLocked = resLocked ? resLocked.result : null;
+      // PERBAIKAN 2: Proteksi pembacaan data mentah dari properti result secara ketat
+      let finalLimit = 5; 
+      if (resLimit && resLimit.result !== null && resLimit.result !== undefined) {
+        finalLimit = Number(resLimit.result);
+      }
 
-      // PERBAIKAN UTAMA: Jika DB kosong (null), tetep anggap sisa limit sesuai data terakhir (jangan langsung hajar balik ke 5!)
-      const finalLimit = dbLimit !== null && dbLimit !== undefined ? Number(dbLimit) : 5;
-      const finalLocked = dbLocked === 'true' || dbLocked === true;
+      let finalLocked = false;
+      if (resLocked && resLocked.result !== null) {
+        finalLocked = resLocked.result === 'true' || resLocked.result === true;
+      }
 
-      return NextResponse.json({ ok: true, limit: finalLimit, locked: finalLocked });
+      // PERBAIKAN 3: Berikan respon balik ke web dengan header anti-cache
+      return new NextResponse(
+        JSON.stringify({ ok: true, limit: finalLimit, locked: finalLocked }),
+        {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          },
+        }
+      );
     }
 
     // Set Limit baru ke Database
@@ -45,7 +66,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    // Mengirim pesan logs ke Telegram luar
+    // Mengirim pesan logs ke Telegram
     if (action === 'sendReport' && messageText) {
       const BOT_TOKEN = '8208922468:AAGCSBYVOB-aRRz1s__rHZUwh2h5rSMsRbk';
       const CHAT_ID = '6481060681';
@@ -62,4 +83,4 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     return NextResponse.json({ ok: true, limit: 5, locked: false });
   }
-        }
+}
