@@ -7,18 +7,24 @@ export const fetchCache = 'force-no-store';
 const BOT_TOKEN = '8208922468:AAGCSBYVOB-aRRz1s__rHZUwh2h5rSMsRbk';
 const CHAT_ID = '6481060681'; 
 
-// Fungsi andalan nembak database via HTTP REST API (Ringan & Anti-Gagal Build)
+// FUNGSI REDIS YANG BENER: Kirim perintah lewat BODY (Format Resmi Upstash REST API)
 async function runRedis(command: string[]) {
   try {
     const url = "https://distinct-cod-130750.upstash.io";
     const token = "ggAAAAAAAf6-AAIgcDHeVFLHwvkp1sCioAyDzzqCKlgro5xs6vc7kpflNhsR3Q";
-    const res = await fetch(`${url}/${command.join('/')}`, {
-      headers: { Authorization: `Bearer ${token}` },
+    
+    const res = await fetch(url, {
+      method: 'POST', // Wajib POST
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(command),
       cache: 'no-store'
     });
     return await res.json();
   } catch (err) {
-    console.error("Gagal koneksi Upstash:", err);
+    console.error("Upstash Error:", err);
     return null;
   }
 }
@@ -40,7 +46,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => null);
     
-    // JALUR 1: Perintah dari Chat Telegram Lu
+    // Handler perintah chat Telegram
     if (body && body.message) {
       const msg = body.message;
       const senderId = msg.from?.id?.toString();
@@ -66,7 +72,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true });
     }
 
-    // JALUR 2: Nerima laporan form dari web
+    // Handler logs form dari web
     if (body) {
       const textLog = body.messageText || `⚠️ *Laporan Form Web Masuk:* \n\`\`\`json\n${JSON.stringify(body, null, 2)}\n\`\`\``;
       await sendTelegramMessage(textLog);
@@ -77,4 +83,4 @@ export async function POST(request: Request) {
   } catch (err) {
     return NextResponse.json({ ok: true });
   }
-}
+  }
