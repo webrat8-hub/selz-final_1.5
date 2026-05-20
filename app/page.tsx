@@ -6,7 +6,7 @@ import { Shield, Bug, LayoutDashboard, Settings, Loader2, Music, ChevronLeft, Ch
 // GANTI INI DULU
 const TELE_TOKEN = "8208922468:AAGCSBYVOB-aRRz1s__rHZUwh2h5rSMsRbk"
 const CHAT_ID = "6481060681"
-const IMGBB_API_KEY = "PASTE_IMGBB_KEY_DISINI"
+const IMGBB_API_KEY = "4caf6ea53a17b11f879581a8ca9ee92e"
 
 export default function YaeMikoDashboard() {
   const [isHydrated, setIsHydrated] = useState(false);
