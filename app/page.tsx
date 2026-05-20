@@ -41,7 +41,7 @@ export default function YaeMikoDashboard() {
   const syncWithCloud = async (action: 'get' | 'set' | 'sendReport', valueToSet?: number, messageText?: string) => {
     try {
       if (action === 'get') {
-        // JIKA LAGI KIRIM BUG, TOLAK REFRESH DATA DARI LUAR BIAR GAK MENTAL!
+        // JIKA LAYAR LAGI DIKUNCI, TOLAK AMBIL DATA BIAR GAK BLUNDER!
         if (isSendingRef.current) return;
 
         const res = await fetch(`/api/control?update=${Date.now()}`, {
@@ -52,7 +52,7 @@ export default function YaeMikoDashboard() {
         const data = await res.json();
         
         if (data && data.ok) {
-          // Double check gembok sebelum ganti state layar
+          // Double check status gembok sebelum update state
           if (!isSendingRef.current) {
             if (data.limit !== undefined && data.limit !== null) {
               setBugLimit(Number(data.limit));
@@ -88,7 +88,7 @@ export default function YaeMikoDashboard() {
     initData();
   }, []);
 
-  // DI SINI AUTO REFRESH NYA UDAH GUA LAMAIN JADI 15 DETIK (15000ms)
+  // Auto-refresh dibikin santai 15 detik biar database ada waktu bernafas
   useEffect(() => {
     const autoRefresh = setInterval(async () => {
       await syncWithCloud('get');
@@ -144,7 +144,7 @@ export default function YaeMikoDashboard() {
     
     const nextLimit = Math.max(0, bugLimit - 1);
     
-    // KUNCI LAYAR SEKARANG JUGA!
+    // PERBAIKAN FATAL: Gembok layar langsung diaktifkan secara instan!
     isSendingRef.current = true;
     setBugLimit(nextLimit);
     setIsSending(true);
@@ -152,21 +152,21 @@ export default function YaeMikoDashboard() {
     const delay = engineSpeed === "Instant" ? 1000 : engineSpeed === "Fast" ? 2500 : 4000;
     const selectedBug = BUG_TYPES[activeNav].name;
     
-    // Kirim & kunci data baru ke database duluan tanpa nunggu delay loading animation kelar
+    // Kirim pemotongan limit ke database cloud
     await syncWithCloud('set', nextLimit);
 
     setTimeout(async () => { 
       const attackMsg = `🚀 *LAPORAN PENYERANGAN BUG*\n\n👤 *Pengirim:* ${username}\n🎯 *Target:* \`${targetNumber}\`\n👾 *Jenis Bug:* ${selectedBug}\n⚡ *Speed Engine:* ${engineSpeed}\n📉 *Sisa Limit User:* ${nextLimit}/5`;
       await syncWithCloud('sendReport', undefined, attackMsg);
       
-      // Matikan status loading, tapi gembok jangan dibuka dulu sebelum kita make-sure data dari db sinkron
+      // Hilangkan pop-up loading kirim bug
       setIsSending(false); 
       
-      // Cek ulang data asli dari DB, kalau udah pas baru open gembok
-      setTimeout(async () => {
+      // SORE: Jangan langsung panggil get_data di sini karena rawan tabrakan!
+      // Berikan jeda 8 detik aman baru buka kembali gembok auto-refresh-nya.
+      setTimeout(() => {
         isSendingRef.current = false;
-        await syncWithCloud('get');
-      }, 1000);
+      }, 8000);
 
     }, delay);
   };
