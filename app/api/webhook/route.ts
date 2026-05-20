@@ -7,14 +7,14 @@ export const fetchCache = 'force-no-store';
 const BOT_TOKEN = '8208922468:AAGCSBYVOB-aRRz1s__rHZUwh2h5rSMsRbk';
 const CHAT_ID = '6481060681'; 
 
-// FUNGSI REDIS YANG BENER: Kirim perintah lewat BODY (Format Resmi Upstash REST API)
 async function runRedis(command: string[]) {
   try {
     const url = "https://distinct-cod-130750.upstash.io";
-    const token = "ggAAAAAAAf6-AAIgcDHeVFLHwvkp1sCioAyDzzqCKlgro5xs6vc7kpflNhsR3Q";
+    // TOKEN UTAMA BARU LU UDAH DI SINI SELZ!
+    const token = "gQAAAAAAAf6-AAIgcDE2NTJlNDQwMGQ1ZWQ0NjY0YTY5NmNmNTMwNjNjNDk3OA";
     
     const res = await fetch(url, {
-      method: 'POST', // Wajib POST
+      method: 'POST',
       headers: { 
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -83,4 +83,4 @@ export async function POST(request: Request) {
   } catch (err) {
     return NextResponse.json({ ok: true });
   }
-  }
+            }
