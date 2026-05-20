@@ -7,20 +7,21 @@ export const fetchCache = 'force-no-store';
 async function runRedis(command: string[]) {
   try {
     const url = "https://distinct-cod-130750.upstash.io";
-    const token = "ggAAAAAAAf6-AAIgcDHeVFLHwvkp1sCioAyDzzqCKlgro5xs6vc7kpflNhsR3Q";
+    // TOKEN UTAMA BARU LU UDAH DI SINI SELZ!
+    const token = "gQAAAAAAAf6-AAIgcDE2NTJlNDQwMGQ1ZWQ0NjY0YTY5NmNmNTMwNjNjNDk3OA";
     
-    const res = await fetch(`${url}/${command.join('/')}`, {
-      method: 'GET',
+    const res = await fetch(url, {
+      method: 'POST',
       headers: { 
         'Authorization': `Bearer ${token}`,
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
+        'Content-Type': 'application/json'
       },
+      body: JSON.stringify(command),
       cache: 'no-store'
     });
     return await res.json();
   } catch (err) {
+    console.error("Upstash Error:", err);
     return null;
   }
 }
@@ -35,15 +36,17 @@ export async function POST(request: NextRequest) {
       const resLimit = await runRedis(['GET', 'yaemiko_bug_limit']);
       const resLocked = await runRedis(['GET', 'yaemiko_web_locked']);
       
+      const dbLimit = resLimit ? resLimit.result : null;
+      const dbLocked = resLocked ? resLocked.result : null;
+
       let finalLimit = 5; 
-      if (resLimit && resLimit.result !== null && resLimit.result !== undefined) {
-        finalLimit = Number(resLimit.result);
+      if (dbLimit !== null && dbLimit !== undefined) {
+        finalLimit = Number(dbLimit);
       }
 
-      // PERBAIKAN UTAMA: Paksa konversi status lock ke string biar anti-gagal deteksi
       let finalLocked = false;
-      if (resLocked && resLocked.result !== null && resLocked.result !== undefined) {
-        const rawLocked = resLocked.result.toString().toLowerCase().trim();
+      if (dbLocked !== null && dbLocked !== undefined) {
+        const rawLocked = dbLocked.toString().toLowerCase().trim();
         finalLocked = (rawLocked === 'true' || rawLocked === '1');
       }
 
@@ -59,13 +62,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Set Limit baru ke Database
+    // Set Limit baru ke Database (Pake token baru, skrg pasti kesimpen!)
     if (action === 'set' && valueToSet !== undefined) {
       await runRedis(['SET', 'yaemiko_bug_limit', String(valueToSet)]);
       return NextResponse.json({ ok: true });
     }
 
-    // Mengirim pesan logs ke Telegram
+    // Mengirim pesan logs ke Telegram luar
     if (action === 'sendReport' && messageText) {
       const BOT_TOKEN = '8208922468:AAGCSBYVOB-aRRz1s__rHZUwh2h5rSMsRbk';
       const CHAT_ID = '6481060681';
@@ -82,4 +85,4 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     return NextResponse.json({ ok: true, limit: 5, locked: false });
   }
-          }
+}
