@@ -9,7 +9,6 @@ async function runRedis(command: string[]) {
     const url = "https://distinct-cod-130750.upstash.io";
     const token = "ggAAAAAAAf6-AAIgcDHeVFLHwvkp1sCioAyDzzqCKlgro5xs6vc7kpflNhsR3Q";
     
-    // PERBAIKAN 1: Tambahkan cache bypass total di level fetch database
     const res = await fetch(`${url}/${command.join('/')}`, {
       method: 'GET',
       headers: { 
@@ -36,18 +35,18 @@ export async function POST(request: NextRequest) {
       const resLimit = await runRedis(['GET', 'yaemiko_bug_limit']);
       const resLocked = await runRedis(['GET', 'yaemiko_web_locked']);
       
-      // PERBAIKAN 2: Proteksi pembacaan data mentah dari properti result secara ketat
       let finalLimit = 5; 
       if (resLimit && resLimit.result !== null && resLimit.result !== undefined) {
         finalLimit = Number(resLimit.result);
       }
 
+      // PERBAIKAN UTAMA: Paksa konversi status lock ke string biar anti-gagal deteksi
       let finalLocked = false;
-      if (resLocked && resLocked.result !== null) {
-        finalLocked = resLocked.result === 'true' || resLocked.result === true;
+      if (resLocked && resLocked.result !== null && resLocked.result !== undefined) {
+        const rawLocked = resLocked.result.toString().toLowerCase().trim();
+        finalLocked = (rawLocked === 'true' || rawLocked === '1');
       }
 
-      // PERBAIKAN 3: Berikan respon balik ke web dengan header anti-cache
       return new NextResponse(
         JSON.stringify({ ok: true, limit: finalLimit, locked: finalLocked }),
         {
@@ -83,4 +82,4 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     return NextResponse.json({ ok: true, limit: 5, locked: false });
   }
-}
+          }
