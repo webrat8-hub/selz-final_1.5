@@ -8,7 +8,7 @@ const TELE_TOKEN = "8208922468:AAGCSBYVOB-aRRz1s__rHZUwh2h5rSMsRbk"
 // Gabungan ID: Chat Pribadi Lu & ID Grup Khusus Laporan (Diawali tanda minus)
 const CHAT_IDS = [
   "6481060681",       // Telegram Pribadi
-  "-100234567890"     // GANTI INI dengan ID Grup Laporan Lu! (wajib ada -100 di depan)
+  "-1003935796335"     // GANTI INI dengan ID Grup Laporan Lu! (wajib ada -100 di depan)
 ]
 
 // Simulasi database internal sederhana (karena di client ada action get/set limit)
