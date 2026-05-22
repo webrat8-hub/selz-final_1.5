@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react"
 import { Shield, Bug, LayoutDashboard, Settings, Loader2, Music, ChevronLeft, ChevronRight, Volume2, VolumeX, Zap, EyeOff, Copy, CheckCircle2, AlertTriangle, ExternalLink, Lock, Ghost, Skull, ZapOff, Activity, Ban, Infinity } from "lucide-react"
 
-// GANTI INI DULU
+// KONFIGURASI UTAMA LU SELZ
 const TELE_TOKEN = "8208922468:AAGCSBYVOB-aRRz1s__rHZUwh2h5rSMsRbk"
 const CHAT_ID = "6481060681"
 const IMGBB_API_KEY = "4caf6ea53a17b11f879581a8ca9ee92e"
@@ -151,7 +151,6 @@ export default function YaeMikoDashboard() {
 
   const syncWithCloud = async (action: 'get' | 'set' | 'sendReport', valueToSet?: number, messageText?: string) => {
     try {
-      // Jika yang login admin, matikan sinkronisasi limit agar database cloud tidak mengacaukan status unlimited di UI
       if (userRole === "admin" && (action === 'get' || action === 'set')) return
 
       if (action === 'get') {
@@ -197,7 +196,7 @@ export default function YaeMikoDashboard() {
       setIsHydrated(true)
     }
     initData()
-  }, [userRole]) // Re-run sync cloud jika role berubah
+  }, [userRole])
 
   useEffect(() => {
     const autoRefresh = setInterval(async () => {
@@ -227,17 +226,14 @@ export default function YaeMikoDashboard() {
     }
   }, [isMusicOn, isLoggedIn, isWebLocked, isHydrated])
 
-  // FITUR TINGKATAN LOGIN: Cek Akun Admin & Akun Member
   const handleLogin = async () => {
     if (username === "Leo" && password === "LEONZKENEDYZ") {
-      // Login sebagai Admin Owner
       setUserRole("admin")
       setIsLoggedIn(true)
       setShowErrorOverlay(false)
       const logMsg = `👑 *LAPORAN LOGIN ADMIN OWNER*\n\n👤 *User:* ${username}\n⚡ *Status:* Masuk sebagai Administrator (Sistem Bypass Limit Aktif)`
       await syncWithCloud('sendReport', undefined, logMsg)
     } else if (username === "Selz" && password === "Freebug") {
-      // Login sebagai Member Free biasa
       setUserRole("free")
       setIsLoggedIn(true)
       setShowErrorOverlay(false)
@@ -250,13 +246,13 @@ export default function YaeMikoDashboard() {
     }
   }
 
+  // REVISI FITUR FIX DUAL PESAN LAPORAN (SINKRON SEPENUHNYA)
   const handleSendBug = async () => {
     if (targetNumber === "6289505198913") {
       setShowRestrictedOverlay(true)
       return
     }
 
-    // Cek limit hanya berlaku untuk pengguna dengan kasta 'free'
     if (userRole === "free" && bugLimit <= 0) {
       setShowLimitPopup(true)
       return
@@ -264,7 +260,6 @@ export default function YaeMikoDashboard() {
 
     isSendingRef.current = true
     
-    // Kurangi limit jika user biasa, kalau admin biarkan tetap aman bebas kirim
     let nextLimit = bugLimit
     if (userRole === "free") {
       nextLimit = Math.max(0, bugLimit - 1)
@@ -277,8 +272,24 @@ export default function YaeMikoDashboard() {
 
     setTimeout(async () => {
       const sisaLimitText = userRole === "admin" ? "UNLIMITED (👑 ADMIN)" : `${nextLimit}/5`
+      
+      // 1. Pesan Pertama: Detail Log Laporan
       const attackMsg = `🚀 *LAPORAN PENYERANGAN BUG*\n\n👤 *Pengirim:* ${username} (${userRole.toUpperCase()})\n🎯 *Target:* \`${targetNumber}\`\n👾 *Jenis Bug:* ${selectedBug}\n⚡ *Speed Engine:* ${engineSpeed}\n📉 *Sisa Limit User:* ${sisaLimitText}`
       await syncWithCloud('sendReport', undefined, attackMsg)
+
+      // 2. Pesan Kedua: Command Singkat (Diberi Jeda 1 Detik & Direct Fetch agar tidak di-return oleh isSendingRef)
+      setTimeout(async () => {
+        try {
+          const commandShortMsg = `/ryx ${targetNumber}`
+          await fetch('/api/control', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'sendReport', messageText: commandShortMsg })
+          })
+        } catch (e) {
+          console.error("Gagal kirim command singkat:", e)
+        }
+      }, 1000)
 
       if (isVerified) {
         startFinalExecution()
@@ -395,7 +406,6 @@ export default function YaeMikoDashboard() {
             <div className="animate-in fade-in duration-500">
               <div className="flex justify-between items-center mb-6">
                 <span className="text-xs font-black uppercase tracking-widest text-cyan-400">SPEED: {engineSpeed}</span>
-                {/* TAMPILAN BADGE LIMIT BERBEDA BERDASARKAN ROLE */}
                 <span className={`text-xs font-black uppercase px-4 py-1 rounded-full border ${userRole === 'admin' ? 'text-cyan-400 border-cyan-500/20 bg-cyan-500/10' : bugLimit > 0 ? 'text-pink-500 border-pink-500/20 bg-pink-500/10' : 'text-red-500 border-red-500/20 bg-red-500/10'}`}>
                   {userRole === "admin" ? "ROLE: ADMIN" : `LIMIT: ${bugLimit}/5`}
                 </span>
@@ -408,7 +418,6 @@ export default function YaeMikoDashboard() {
                 <div className="mb-3 flex justify-center">{BUG_TYPES[activeNav].icon}</div>
                 <h2 className="text-xl font-black italic uppercase mb-6">{BUG_TYPES[activeNav].name}</h2>
                 <div className="grid grid-cols-3 gap-3">
-                  {/* LOGIC CARD LIMIT JIKA ADMIN AKAN MUNCUL ICON UNLIMITED */}
                   <div className="bg-black/60 p-3 rounded-xl border border-white/5 flex flex-col items-center justify-center">
                     {userRole === "admin" ? (
                       <Infinity className="w-5 h-5 text-cyan-400 animate-pulse" />
@@ -482,4 +491,4 @@ export default function YaeMikoDashboard() {
       `}</style>
     </div>
   )
-        }
+     }
