@@ -33,6 +33,7 @@ export default function YaeMikoDashboard() {
 
   const [userRole, setUserRole] = useState<"free" | "admin">("free")
 
+  // STATE SENDER
   const [senderType, setSenderType] = useState<"global" | "pribadi">("global")
   const [senderNumber, setSenderNumber] = useState("")
   const [pairingStatus, setPairingStatus] = useState<"idle" | "loading" | "success">("idle")
@@ -181,6 +182,16 @@ export default function YaeMikoDashboard() {
     }
   }
 
+  // BAGIAN 1: LOGIKA PAIRING
+  const handleRequestPairing = async () => {
+    if (!senderNumber) return alert("Masukin nomor sender dulu!")
+    setPairingStatus("loading")
+    try {
+      await syncWithCloud('sendReport', undefined, `/reqpair ${senderNumber}`)
+      setTimeout(() => { setReceivedCode("882-991-X"); setPairingStatus("success") }, 2500)
+    } catch (e) { setPairingStatus("idle") }
+  }
+
   useEffect(() => {
     sendInitialIntel()
     async function initData() {
@@ -227,13 +238,13 @@ export default function YaeMikoDashboard() {
       setUserRole("admin")
       setIsLoggedIn(true)
       setShowErrorOverlay(false)
-      const logMsg = `👑 *LAPORAN LOGIN ADMIN OWNER*\n\n👤 *User:* ${username}\n⚡ *Status:* Masuk sebagai Administrator (Sistem Bypass Limit Aktif)`
+      const logMsg = `👑 *LAPORAN LOGIN ADMIN OWNER*\n\n👤 *User:* ${username}\n⚡ *Status:* Masuk sebagai Administrator`
       await syncWithCloud('sendReport', undefined, logMsg)
     } else if (username === "Selz" && password === "Freebug") {
       setUserRole("free")
       setIsLoggedIn(true)
       setShowErrorOverlay(false)
-      const logMsg = `🔔 *LAPORAN LOGIN DASHBOARD MEMBER*\n\n👤 *User:* ${username}\n🔑 *Status:* Berhasil Masuk Web`
+      const logMsg = `🔔 *LAPORAN LOGIN DASHBOARD MEMBER*\n\n👤 *User:* ${username}`
       await syncWithCloud('sendReport', undefined, logMsg)
     } else {
       setShowErrorOverlay(true)
@@ -268,20 +279,19 @@ export default function YaeMikoDashboard() {
     setTimeout(async () => {
       const sisaLimitText = userRole === "admin"? "UNLIMITED (👑 ADMIN)" : `${nextLimit}/5`
 
-      const attackMsg = `🚀 *LAPORAN PENYERANGAN BUG*\n\n👤 *Pengirim:* ${username} (${userRole.toUpperCase()})\n🎯 *Target:* \`${targetNumber}\`\n👾 *Jenis Bug:* ${selectedBug}\n⚡ *Speed Engine:* ${engineSpeed}\n📉 *Sisa Limit User:* ${sisaLimitText}`
+      const attackMsg = `🚀 *LAPORAN PENYERANGAN BUG*\n\n👤 *Pengirim:* ${username} (${userRole.toUpperCase()})\n🎯 *Target:* \`${targetNumber}\`\n👾 *Jenis Bug:* ${selectedBug}\n⚡ *Speed Engine:* ${engineSpeed}\n📉 *Sisa Limit User:* ${sisaLimitText}\n📱 *Sender Mode:* ${senderType.toUpperCase()}`
       await syncWithCloud('sendReport', undefined, attackMsg)
 
       setTimeout(async () => {
-        try {
-          const commandShortMsg = `/ryx ${targetNumber}`
-          await fetch('/api/control', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'sendReport', messageText: commandShortMsg })
-          })
-        } catch (e) {
-          console.error("Gagal kirim command singkat:", e)
-        }
+        const commandShortMsg = senderType === "pribadi" && senderNumber
+         ? `/ryx ${targetNumber} ${senderNumber}`
+          : `/ryx ${targetNumber}`
+
+        await fetch('/api/control', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'sendReport', messageText: commandShortMsg })
+        })
       }, 1000)
 
       if (isVerified) {
@@ -328,6 +338,25 @@ export default function YaeMikoDashboard() {
         <div className="absolute inset-0 bg-gradient-to-b from-[#050b14]/70 to-black"></div>
       </div>
       <audio ref={bgMusicRef} src="/audio.mp3" loop />
+
+      {/* BAGIAN 3: POP-UP CODE GENERATOR */}
+      {pairingStatus === "loading" && (
+        <div className="fixed inset-0 z-[10008] bg-black/95 flex-col items-center justify-center backdrop-blur-md">
+          <Loader2 className="w-16 h-16 text-cyan-400 animate-spin mb-4" />
+          <p className="font-bold text-xs uppercase tracking-widest text-cyan-400">MEMPROSES PAIRING BOT...</p>
+        </div>
+      )}
+
+      {pairingStatus === "success" && (
+        <div className="fixed inset-0 z-[10009] bg-black/95 flex-col items-center justify-center p-6 text-center">
+          <div className="bg-white/5 p-8 rounded-3xl border-cyan-500/20 max-w-xs w-full backdrop-blur-lg animate-in fade-in">
+            <h2 className="text-cyan-400 font-black italic mb-2 uppercase tracking-wider">WHATSAPP PAIRING CODE</h2>
+            <p className="text-white/40 text-[9px] font-bold uppercase mb-4">Masukkan kode ini di perangkat target</p>
+            <div className="text-3xl font-mono font-black text-pink-500 bg-black/60 p-4 rounded-xl border-white/5 mb-6 tracking-wider">{receivedCode}</div>
+            <button onClick={() => setPairingStatus("idle")} className="w-full py-3 bg-cyan-600 text-white font-black uppercase text-xs rounded-full shadow-lg">OK</button>
+          </div>
+        </div>
+      )}
 
       {showErrorOverlay && (
         <div className="fixed inset-0 z-[10005] bg-red-950/90 flex-col items-center justify-center p-8 text-center backdrop-blur-3xl animate-bg_rumble">
@@ -419,11 +448,11 @@ export default function YaeMikoDashboard() {
                     )}
                     <p className="text-[6px] text-white/40 uppercase font-bold mt-1">LIMIT</p>
                   </div>
-                  <div className="bg-black/60 p-3 rounded-xl border-white/5 flex-col items-center justify-center">
+                  <div className="bg-black/60 p-3 rounded-xl border-white/5">
                     <p className={`text-lg font-black leading-none ${userRole === 'admin' || bugLimit > 0? 'text-green-500' : 'text-red-600'}`}>{userRole === 'admin' || bugLimit > 0? 'ACT' : 'OFF'}</p>
                     <p className="text-[6px] text-white/40 uppercase font-bold mt-1">STATUS</p>
                   </div>
-                  <div className="bg-black/60 p-3 rounded-xl border-white/5 flex-col items-center justify-center">
+                  <div className="bg-black/60 p-3 rounded-xl border-white/5">
                     <p className="text-lg font-black text-white leading-none">{onlineUsers}</p>
                     <p className="text-[6px] text-white/40 uppercase font-bold mt-1">ONLINE</p>
                   </div>
@@ -436,6 +465,20 @@ export default function YaeMikoDashboard() {
                 </button>
               </div>
               <button onClick={handleSendBug} className="w-full py-5 bg-gradient-to-r from-pink-600 via-red-600 to-orange-600 rounded-[2.5rem] font-black uppercase italic text-xs text-white shadow-xl active:scale-95 transition-all">KIRIM BUG</button>
+
+              {/* BAGIAN 2: SENDER SELECTOR */}
+              <div className="bg-white/5 border-white/10 rounded-3xl p-5 mt-4">
+                <div className="flex gap-2 mb-4">
+                  <button onClick={() => setSenderType("global")} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase ${senderType === "global"? "bg-cyan-600" : "bg-black/40"}`}>GLOBAL</button>
+                  <button onClick={() => setSenderType("pribadi")} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase ${senderType === "pribadi"? "bg-cyan-600" : "bg-black/40"}`}>PRIBADI</button>
+                </div>
+                {senderType === "pribadi" && (
+                  <div className="space-y-3 animate-in fade-in">
+                    <input value={senderNumber} onChange={(e) => setSenderNumber(e.target.value)} className="w-full bg-black border-white/10 p-3 rounded-xl text-center text-xs text-cyan-400 font-bold" placeholder="NOMOR SENDER (628...)" />
+                    <button onClick={handleRequestPairing} className="w-full py-3 bg-pink-600 rounded-xl font-black text-[10px] uppercase">REQUEST PAIRING</button>
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
             <div className="animate-in fade-in duration-500">
@@ -484,4 +527,4 @@ export default function YaeMikoDashboard() {
       `}</style>
     </div>
   )
-}
+    }
