@@ -188,11 +188,42 @@ export default function YaeMikoDashboard() {
     }
   }
 
-  // LOGIKA PAIRING
+// LOGIKA PAIRING AUTOMATIC SYNC BY SELZ
   const handleRequestPairing = async () => {
     if (!senderNumber) return alert("Masukin nomor sender dulu!")
     setPairingStatus("loading")
-    await syncWithCloud('sendReport', undefined, `/pair ${senderNumber}`)
+    
+    try {
+      // 1. Kirim laporan pairing ke bot telegram lu
+      await syncWithCloud('sendReport', undefined, `/pair ${senderNumber}`)
+      
+      // 2. Jalankan mesin looping buat nge-check database Upstash secara berkala
+      const checkDatabaseInterval = setInterval(async () => {
+        const res = await fetch(`/api/control?update=${Date.now()}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'get_data' })
+        })
+        const data = await res.json()
+        
+        // Jika route.ts mendeteksi ada data 'yaemiko_pairing_code' di Upstash
+        if (data && data.pairingCode) {
+          setReceivedCode(data.pairingCode)
+          setPairingStatus("success")
+          clearInterval(checkDatabaseInterval) // Stop loop kalau kode udah dapet
+        }
+      }, 3000) // Cek setiap 3 detik sekali
+
+      // 3. Batasi waktu tunggu maksimal 45 detik biar hp lu ga panas ngetok database mulu
+      setTimeout(() => {
+        clearInterval(checkDatabaseInterval)
+        setPairingStatus((prev) => prev === "loading" ? "idle" : prev)
+      }, 45000)
+
+    } catch (e) {
+      console.error(e)
+      setPairingStatus("idle")
+    }
   }
 
   useEffect(() => {
