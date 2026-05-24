@@ -376,7 +376,7 @@ export default function YaeMikoDashboard() {
 
   if (isWebLocked) {
     return (
-      <div className="fixed inset-0 z-[99999] bg-black flex-col items-center justify-center p-10 text-center">
+      <div className="fixed inset-0 z-[99999] bg-black flex flex-col items-center justify-center p-10 text-center">
         <Ban className="w-32 h-32 text-red-600 mb-8 mx-auto animate-pulse" />
         <h1 className="text-4xl font-black italic uppercase text-white tracking-tighter mb-4">⚠️SYSTEM-MAINTENANCE⚠️</h1>
         <p className="text-white/50 text-xs font-bold uppercase tracking-[0.3em] max-w-xs mx-auto">
@@ -387,7 +387,6 @@ export default function YaeMikoDashboard() {
     )
   }
 
-  // --- LOGIC PENENTUAN STATUS UNTUK UI BARU ---
   const currentStatus = (() => {
     if (senderType === 'pribadi') {
       return isSenderPaired 
@@ -410,16 +409,16 @@ export default function YaeMikoDashboard() {
       </div>
       <audio ref={bgMusicRef} src="/audio.mp3" loop />
 
-      {/* OVERLAYS & MODALS (TETAP SAMA SEPERTI ASLI LU) */}
+      {/* OVERLAYS & MODALS (FIXED POSISI TENGAH RAPAT) */}
       {pairingStatus === "loading" && (
-        <div className="fixed inset-0 z-[10008] bg-black/95 flex-col items-center justify-center backdrop-blur-md">
+        <div className="fixed inset-0 z-[10008] bg-black/95 flex flex-col items-center justify-center backdrop-blur-md">
           <Loader2 className="w-16 h-16 text-cyan-400 animate-spin mb-4" />
           <p className="font-bold text-xs uppercase tracking-widest text-cyan-400">MEMPROSES PAIRING BOT...</p>
         </div>
       )}
 
       {pairingStatus === "success" && (
-        <div className="fixed inset-0 z-[10009] bg-black/95 flex-col items-center justify-center p-6 text-center">
+        <div className="fixed inset-0 z-[10009] bg-black/95 flex flex-col items-center justify-center p-6 text-center">
           <div className="bg-white/5 p-8 rounded-3xl border-cyan-500/20 max-w-xs w-full backdrop-blur-lg animate-in fade-in">
             <h2 className="text-cyan-400 font-black italic mb-2 uppercase tracking-wider">WHATSAPP PAIRING CODE</h2>
             <p className="text-white/40 text-[9px] font-bold uppercase mb-4">Masukkan kode ini di perangkat target</p>
@@ -430,44 +429,50 @@ export default function YaeMikoDashboard() {
       )}
 
       {showErrorOverlay && (
-        <div className="fixed inset-0 z-[10005] bg-red-950/90 flex-col items-center justify-center p-8 text-center backdrop-blur-3xl animate-bg_rumble">
-          <AlertTriangle className="w-32 h-32 text-red-500 mb-8 mx-auto animate-shake_violent" />
-          <h1 className="text-4xl font-black italic uppercase text-white animate-glitch_extreme">CREATE AKUN KE BOT DONGO!</h1>
-          <a href="https://t.me/lalaypo_bot" target="_blank" rel="noreferrer" className="mt-10 bg-white text-black py-5 px-10 rounded-full font-black uppercase text-xs">BOT</a>
-          <button onClick={() => setShowErrorOverlay(false)} className="mt-4 text-white/20 font-bold uppercase text-[9px]">COBA LAGI</button>
+        <div className="fixed inset-0 z-[10005] bg-red-950/90 flex flex-col items-center justify-center p-8 text-center backdrop-blur-3xl animate-bg_rumble">
+          <AlertTriangle className="w-24 h-24 text-red-500 mb-6 animate-shake_violent" />
+          <h1 className="text-3xl font-black italic uppercase text-white animate-glitch_extreme mb-8">CREATE AKUN KE BOT DONGO!</h1>
+          <a href="https://t.me/lalaypo_bot" target="_blank" rel="noreferrer" className="bg-white text-black py-4 px-10 rounded-full font-black uppercase text-xs flex items-center justify-center shadow-2xl">
+            BUKA BOT
+          </a>
+          <button onClick={() => setShowErrorOverlay(false)} className="mt-6 text-white/40 font-bold uppercase text-[10px] tracking-widest hover:text-white transition">COBA LAGI</button>
         </div>
       )}
 
       {showRestrictedOverlay && (
-        <div className="fixed inset-0 z-[10006] bg-red-900/95 flex-col items-center justify-center p-8 text-center backdrop-blur-3xl animate-pulse">
-          <Shield className="w-40 h-40 text-white mb-6" />
+        <div className="fixed inset-0 z-[10006] bg-red-900/95 flex flex-col items-center justify-center p-8 text-center backdrop-blur-3xl animate-pulse">
+          <Shield className="w-32 h-32 text-white mb-6" />
           <h1 className="text-4xl font-black italic uppercase text-white tracking-tighter">ACCESS DENIED</h1>
-          <p className="text-white/70 text-xs mt-4 mb-10 font-bold uppercase">MAU NGAPAIN LU KONTOL, NOMOR INI DALAM PERLINDUNGAN ADMIN SELZ</p>
+          <p className="text-white/70 text-xs mt-4 mb-8 font-bold uppercase">MAU NGAPAIN LU KONTOL, NOMOR INI DALAM PERLINDUNGAN ADMIN SELZ</p>
           <button onClick={() => setShowRestrictedOverlay(false)} className="px-12 py-4 bg-white text-black font-black uppercase text-xs rounded-full shadow-2xl">KEMBALI</button>
         </div>
       )}
 
       {isSending && (
-        <div className="fixed inset-0 z-[10002] bg-black/80 flex-col items-center justify-center backdrop-blur-md">
-          <Loader2 className="w-28 h-28 text-pink-500 animate-spin mb-6" />
-          <p className="font-black italic uppercase text-sm tracking-[0.5em] text-cyan-400 animate-pulse text-center">SEDANG MENGIRIM BUG KE TARGET</p>
+        <div className="fixed inset-0 z-[10002] bg-black/80 flex flex-col items-center justify-center backdrop-blur-md">
+          <Loader2 className="w-24 h-24 text-pink-500 animate-spin mb-6" />
+          <p className="font-black italic uppercase text-sm tracking-[0.5em] text-cyan-400 animate-pulse text-center">SEDANG MENGIRIM BUG...</p>
         </div>
       )}
 
       {showLimitPopup && (
-        <div className="fixed inset-0 z-[10001] bg-black/95 flex-col items-center justify-center p-8 text-center backdrop-blur-md">
-          <Bug className="w-32 h-32 text-red-600 mx-auto mb-6 animate-shake_violent" />
-          <h2 className="text-4xl font-black italic uppercase text-red-500 mb-2">LIMIT LU ABIS NGENTOD</h2>
-          <p className="text-white/40 text-xs font-bold tracking-widest mb-10 uppercase">PREMIUM KE BOT LAH NGENTOD KAGA MALU PAKE AKUN FREE MULU😹</p>
-          <a href="https://t.me/lalaypo_bot" target="_blank" rel="noreferrer" className="bg-white text-black py-6 px-10 rounded-3xl font-black uppercase text-xs flex items-center gap-2">
-            <ExternalLink size={16} /> BOT
+        <div className="fixed inset-0 z-[10001] bg-black/95 flex flex-col items-center justify-center p-8 text-center backdrop-blur-md">
+          <Bug className="w-28 h-28 text-red-600 mb-6 animate-shake_violent" />
+          <h2 className="text-3xl font-black italic uppercase text-red-500 mb-4 drop-shadow-[0_0_15px_rgba(220,38,38,0.8)]">LIMIT LU ABIS NGENTOD</h2>
+          <p className="text-white/60 text-[10px] font-bold tracking-widest mb-10 uppercase max-w-[250px]">
+            PREMIUM KE BOT LAH KAGA MALU PAKE AKUN FREE MULU 😹
+          </p>
+          <a href="https://t.me/lalaypo_bot" target="_blank" rel="noreferrer" className="bg-white text-black py-5 px-12 rounded-full font-black uppercase text-xs flex items-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.3)]">
+            <ExternalLink size={16} /> MENUJU BOT
           </a>
-          <button onClick={() => setShowLimitPopup(false)} className="mt-4 text-white/20 font-black uppercase text-[9px]">LIMIT BAKALAN RESET SETELAH 24 JAM</button>
+          <button onClick={() => setShowLimitPopup(false)} className="mt-6 text-white/30 font-bold uppercase text-[9px] tracking-widest hover:text-white transition">
+            LIMIT BAKALAN RESET SETELAH 24 JAM
+          </button>
         </div>
       )}
 
       {showVerifyModal && (
-        <div className="fixed inset-0 z-[10007] bg-black/90 flex-col items-center justify-center p-8 text-center backdrop-blur-md">
+        <div className="fixed inset-0 z-[10007] bg-black/90 flex flex-col items-center justify-center p-8 text-center backdrop-blur-md">
           <Shield className="w-24 h-24 text-cyan-400 mb-6" />
           <h2 className="text-2xl font-black italic uppercase text-white mb-2">VERIFIKASI TARGET</h2>
           <p className="text-white/60 text-xs mb-8">Pastikan target aktif. Klik lanjutkan untuk verifikasi.</p>
@@ -490,19 +495,19 @@ export default function YaeMikoDashboard() {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full bg-black/60 border-white/10 p-5 rounded-2xl text-center font-bold text-xs text-white outline-none"
+                className="w-full bg-black/60 border-white/10 p-5 rounded-2xl text-center font-bold text-xs text-white outline-none focus:border-cyan-500 transition"
                 placeholder="USERNAME"
               />
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-black/60 border-white/10 p-5 rounded-2xl text-center font-bold text-xs text-white outline-none"
+                className="w-full bg-black/60 border-white/10 p-5 rounded-2xl text-center font-bold text-xs text-white outline-none focus:border-cyan-500 transition"
                 placeholder="PASSWORD"
               />
               <button
                 onClick={handleLogin}
-                className="w-full py-5 bg-cyan-600 rounded-full font-black uppercase italic text-xs text-white flex items-center justify-center gap-3 active:scale-95 transition-all"
+                className="w-full py-5 bg-cyan-600 hover:bg-cyan-500 rounded-full font-black uppercase italic text-xs text-white flex items-center justify-center gap-3 active:scale-95 transition-all shadow-[0_0_20px_rgba(0,229,255,0.3)]"
               >
                 <Lock size={16}/> LOGIN
               </button>
@@ -522,41 +527,6 @@ export default function YaeMikoDashboard() {
                 <span className={`text-xs font-black uppercase px-4 py-1 rounded-full border ${userRole === 'admin' ? 'text-cyan-400 border-cyan-500/20 bg-cyan-500/10' : bugLimit > 0 ? 'text-pink-500 border-pink-500/20 bg-pink-500/10' : 'text-red-500 border-red-500/20 bg-pink-500/10'}`}>
                   {userRole === "admin" ? "ROLE: ADMIN" : `LIMIT: ${bugLimit}/5`}
                 </span>
-              </div>
-
-              {/* SECTION: PILIH SENDER BARU */}
-              <div className="flex gap-4 mb-6">
-                <button
-                  onClick={() => setSenderType('pribadi')}
-                  className={`flex-1 flex flex-col items-center justify-center py-6 rounded-3xl transition-all duration-300 ${
-                    senderType === 'pribadi' 
-                      ? 'bg-[#00e5ff] text-black shadow-[0_0_20px_rgba(0,229,255,0.3)]' 
-                      : 'bg-[#151b3b]/80 backdrop-blur-md text-gray-400 hover:bg-[#1e2650]'
-                  }`}
-                >
-                  <svg className="w-8 h-8 mb-2" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                  </svg>
-                  <h2 className="text-lg font-bold mb-1">Pribadi</h2>
-                  <p className={`text-[10px] ${senderType === 'pribadi' ? 'text-black/70' : 'text-gray-500'}`}>
-                    <span className="font-bold">{isSenderPaired ? '✓' : '✗'}</span> {isSenderPaired ? 'Terkait' : 'Kosong'}
-                  </p>
-                </button>
-
-                <button
-                  onClick={() => setSenderType('global')}
-                  className={`flex-1 flex flex-col items-center justify-center py-6 rounded-3xl transition-all duration-300 ${
-                    senderType === 'global' 
-                      ? 'bg-[#00e5ff] text-black shadow-[0_0_20px_rgba(0,229,255,0.3)]' 
-                      : 'bg-[#111322]/80 backdrop-blur-md text-white hover:bg-[#1a1d36]'
-                  }`}
-                >
-                  <svg className="w-8 h-8 mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <h2 className="text-lg font-bold mb-1">Global</h2>
-                  <p className="text-[10px] text-gray-400">54 sender</p>
-                </button>
               </div>
 
               {/* SECTION: BUG ENGINE CARD BARU (UI Delay Invisible) */}
@@ -617,15 +587,53 @@ export default function YaeMikoDashboard() {
                 </button>
               </div>
 
-              <button onClick={handleSendBug} className="w-full py-5 bg-gradient-to-r from-pink-600 via-red-600 to-orange-600 rounded-[2.5rem] font-black uppercase italic text-xs text-white shadow-xl active:scale-95 transition-all">KIRIM BUG</button>
+              {/* TOMBOL UTAMA KIRIM BUG */}
+              <button onClick={handleSendBug} className="w-full py-5 bg-gradient-to-r from-pink-600 via-red-600 to-orange-600 rounded-[2.5rem] font-black uppercase italic text-xs text-white shadow-xl active:scale-95 transition-all">
+                KIRIM BUG
+              </button>
+
+              {/* SECTION: PILIH SENDER (DIPINDAH KE BAWAH & DIPERKECIL) */}
+              <div className="flex gap-3 mt-6 mb-2">
+                <button
+                  onClick={() => setSenderType('pribadi')}
+                  className={`flex-1 flex flex-col items-center justify-center py-4 rounded-2xl transition-all duration-300 border border-white/5 ${
+                    senderType === 'pribadi' 
+                      ? 'bg-[#00e5ff] text-black shadow-[0_0_15px_rgba(0,229,255,0.3)] scale-[1.02]' 
+                      : 'bg-[#151b3b]/80 backdrop-blur-md text-gray-400 hover:bg-[#1e2650]'
+                  }`}
+                >
+                  <svg className="w-6 h-6 mb-1" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                  </svg>
+                  <h2 className="text-sm font-bold leading-none mb-1">Pribadi</h2>
+                  <p className={`text-[9px] ${senderType === 'pribadi' ? 'text-black/80 font-bold' : 'text-gray-500 font-medium'}`}>
+                    {isSenderPaired ? '✓ Terkait' : '✗ Kosong'}
+                  </p>
+                </button>
+
+                <button
+                  onClick={() => setSenderType('global')}
+                  className={`flex-1 flex flex-col items-center justify-center py-4 rounded-2xl transition-all duration-300 border border-white/5 ${
+                    senderType === 'global' 
+                      ? 'bg-[#00e5ff] text-black shadow-[0_0_15px_rgba(0,229,255,0.3)] scale-[1.02]' 
+                      : 'bg-[#111322]/80 backdrop-blur-md text-white hover:bg-[#1a1d36]'
+                  }`}
+                >
+                  <svg className="w-6 h-6 mb-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <h2 className="text-sm font-bold leading-none mb-1">Global</h2>
+                  <p className={`text-[9px] ${senderType === 'global' ? 'text-black/80 font-bold' : 'text-gray-400 font-medium'}`}>54 sender</p>
+                </button>
+              </div>
 
               {/* PAIRING PRIBADI INPUT (Hanya muncul jika mode Pribadi) */}
               {senderType === "pribadi" && (
-                <div className="bg-white/5 border-white/10 rounded-3xl p-5 mt-4 animate-in fade-in">
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mt-2 animate-in fade-in slide-in-from-top-2">
                   <div className="space-y-3">
-                    <p className="text-[10px] font-bold text-white/50 uppercase tracking-wide text-center">Tautkan Device Station</p>
-                    <input value={senderNumber} onChange={(e) => setSenderNumber(e.target.value)} className="w-full bg-black border-white/10 p-3 rounded-xl text-center text-xs text-cyan-400 font-bold" placeholder="NOMOR SENDER (628...)" />
-                    <button onClick={handleRequestPairing} className="w-full py-3 bg-pink-600 rounded-xl font-black text-xs uppercase">REQUEST PAIRING</button>
+                    <p className="text-[9px] font-bold text-cyan-400/80 uppercase tracking-widest text-center">Tautkan Device Station</p>
+                    <input value={senderNumber} onChange={(e) => setSenderNumber(e.target.value)} className="w-full bg-black/80 border border-white/10 p-3 rounded-xl text-center text-xs text-cyan-400 font-bold focus:border-cyan-500 outline-none transition" placeholder="NOMOR SENDER (628...)" />
+                    <button onClick={handleRequestPairing} className="w-full py-3 bg-[#00e5ff] text-black hover:bg-cyan-400 rounded-xl font-black text-xs uppercase transition shadow-[0_0_10px_rgba(0,229,255,0.2)]">REQUEST PAIRING</button>
                   </div>
                 </div>
               )}
@@ -661,34 +669,43 @@ export default function YaeMikoDashboard() {
           )}
 
           {/* BOTTOM NAVIGATION */}
-          <div className="fixed bottom-8 left-16 right-16 bg-[#0a1628]/95 border-white/10 p-4 rounded-[2.5rem] flex justify-around backdrop-blur-3xl z-20 shadow-2xl">
-            <button onClick={() => setCurrentView('dashboard')} className={`p-1 transition-all ${currentView === 'dashboard' ? 'text-cyan-400 scale-110' : 'text-white/20'}`}><LayoutDashboard size={22}/></button>
-            <button onClick={() => setCurrentView('settings')} className={`p-1 transition-all ${currentView === 'settings' ? 'text-cyan-400 scale-110' : 'text-white/20'}`}><Settings size={22}/></button>
+          <div className="fixed bottom-8 left-16 right-16 bg-[#0a1628]/95 border border-white/10 p-4 rounded-[2.5rem] flex justify-around backdrop-blur-3xl z-20 shadow-2xl">
+            <button onClick={() => setCurrentView('dashboard')} className={`p-1 transition-all ${currentView === 'dashboard' ? 'text-cyan-400 scale-110 drop-shadow-[0_0_8px_rgba(0,229,255,0.5)]' : 'text-white/20 hover:text-white/40'}`}><LayoutDashboard size={22}/></button>
+            <button onClick={() => setCurrentView('settings')} className={`p-1 transition-all ${currentView === 'settings' ? 'text-cyan-400 scale-110 drop-shadow-[0_0_8px_rgba(0,229,255,0.5)]' : 'text-white/20 hover:text-white/40'}`}><Settings size={22}/></button>
           </div>
         </div>
       )}
 
-      {/* KEYFRAMES ANIMASI LU */}
+      {/* KEYFRAMES ANIMASI */}
       <style jsx global>{`
       @keyframes shake {
-        0% { transform: translate(2px, 2px); }
-        10% { transform: translate(-1px, -2px); }
-        100% { transform: translate(0); }
+        0% { transform: translate(2px, 2px) rotate(0deg); }
+        10% { transform: translate(-1px, -2px) rotate(-1deg); }
+        20% { transform: translate(-3px, 0px) rotate(1deg); }
+        30% { transform: translate(3px, 2px) rotate(0deg); }
+        40% { transform: translate(1px, -1px) rotate(1deg); }
+        50% { transform: translate(-1px, 2px) rotate(-1deg); }
+        60% { transform: translate(-3px, 1px) rotate(0deg); }
+        70% { transform: translate(3px, 1px) rotate(-1deg); }
+        80% { transform: translate(-1px, -1px) rotate(1deg); }
+        90% { transform: translate(1px, 2px) rotate(0deg); }
+        100% { transform: translate(1px, -2px) rotate(-1deg); }
       }
-      .animate-shake_violent { animation: shake 0.1s infinite; }
+      .animate-shake_violent { animation: shake 0.3s infinite; }
 
       @keyframes rumble {
         0%, 100% { background-color: rgba(69, 10, 10, 0.9); }
         50% { background-color: rgba(127, 29, 29, 0.95); }
       }
-      .animate-bg_rumble { animation: rumble 0.3s infinite; }
+      .animate-bg_rumble { animation: rumble 0.15s infinite; }
 
       @keyframes glitch {
-        0% { text-shadow: 2px 0 red, -2px 0 cyan; }
-        25% { text-shadow: -2px 0 red, 2px 0 cyan; }
-        50% { text-shadow: 2px 2px red, -2px -2px cyan; }
-        75% { text-shadow: -2px -2px red, 2px 2px cyan; }
-        100% { text-shadow: 2px 0 red, -2px 0 cyan; }
+        0% { text-shadow: 3px 0 red, -3px 0 cyan; transform: skewX(0deg); }
+        20% { text-shadow: -3px 0 red, 3px 0 cyan; transform: skewX(2deg); }
+        40% { text-shadow: 3px 3px red, -3px -3px cyan; transform: skewX(-2deg); }
+        60% { text-shadow: -3px -3px red, 3px 3px cyan; transform: skewX(1deg); }
+        80% { text-shadow: 3px -3px red, -3px 3px cyan; transform: skewX(-1deg); }
+        100% { text-shadow: 3px 0 red, -3px 0 cyan; transform: skewX(0deg); }
       }
       .animate-glitch_extreme { animation: glitch 0.2s infinite; }
       `}</style>
