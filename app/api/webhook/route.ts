@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 
-const BOT_TOKEN = '8208922468:AAGCSBYVOB-aRRz1s__rHZUwh2h5rSMsRbk';
+const BOT_TOKEN = '8769157554:AAEiE_eIDpwVWe2IXNr3Otz4SXrmJLwX3-8';
 const CHAT_ID = '6481060681'; 
 
 async function runRedis(command: string[]) {
