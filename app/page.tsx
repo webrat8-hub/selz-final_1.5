@@ -163,6 +163,12 @@ export default function YaeMikoDashboard() {
         if (data && data.ok &&!isSendingRef.current) {
           if (data.limit!== undefined) setBugLimit(Number(data.limit))
           if (data.locked!== undefined) setIsWebLocked(data.locked)
+
+          // Auto munculin kode pairing
+          if (pairingStatus === "loading" && data.pairingCode) {
+            setReceivedCode(data.pairingCode)
+            setPairingStatus("success")
+          }
         }
       } else if (action === 'set' && valueToSet!== undefined) {
         await fetch('/api/control', {
@@ -182,14 +188,11 @@ export default function YaeMikoDashboard() {
     }
   }
 
-  // BAGIAN 1: LOGIKA PAIRING
+  // LOGIKA PAIRING
   const handleRequestPairing = async () => {
     if (!senderNumber) return alert("Masukin nomor sender dulu!")
     setPairingStatus("loading")
-    try {
-      await syncWithCloud('sendReport', undefined, `/reqpair ${senderNumber}`)
-      setTimeout(() => { setReceivedCode("882-991-X"); setPairingStatus("success") }, 2500)
-    } catch (e) { setPairingStatus("idle") }
+    await syncWithCloud('sendReport', undefined, `/pair ${senderNumber}`)
   }
 
   useEffect(() => {
@@ -208,9 +211,9 @@ export default function YaeMikoDashboard() {
   useEffect(() => {
     const autoRefresh = setInterval(async () => {
       await syncWithCloud('get')
-    }, 15000)
+    }, 4000)
     return () => clearInterval(autoRefresh)
-  }, [userRole])
+  }, [userRole, pairingStatus])
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -284,7 +287,7 @@ export default function YaeMikoDashboard() {
 
       setTimeout(async () => {
         const commandShortMsg = senderType === "pribadi" && senderNumber
-         ? `/ryx ${targetNumber} ${senderNumber}`
+        ? `/ryx ${targetNumber} ${senderNumber}`
           : `/ryx ${targetNumber}`
 
         await fetch('/api/control', {
@@ -339,7 +342,7 @@ export default function YaeMikoDashboard() {
       </div>
       <audio ref={bgMusicRef} src="/audio.mp3" loop />
 
-      {/* BAGIAN 3: POP-UP CODE GENERATOR */}
+      {/* POP-UP PAIRING */}
       {pairingStatus === "loading" && (
         <div className="fixed inset-0 z-[10008] bg-black/95 flex-col items-center justify-center backdrop-blur-md">
           <Loader2 className="w-16 h-16 text-cyan-400 animate-spin mb-4" />
@@ -408,15 +411,30 @@ export default function YaeMikoDashboard() {
       )}
 
       {!isLoggedIn? (
-        <div className="relative z-10 flex-col items-center justify-center min-h-screen p-6">
-          <h1 className="text-3xl font-black italic uppercase text-cyan-400 tracking-tighter mb-10 text-center">
-            YAE MIKO <span className="text-xs text-white/30 block tracking-[0.5em]">VERSI 1.5</span>
-          </h1>
+        <div className="relative z-10 flex items-center justify-center min-h-screen p-6">
           <div className="w-full max-w-sm bg-white/5 border-white/10 backdrop-blur-3xl rounded-3xl p-10 shadow-2xl">
+            <h1 className="text-3xl font-black italic uppercase text-cyan-400 tracking-tighter mb-10 text-center">
+              YAE MIKO <span className="text-xs text-white/30 block tracking-[0.5em]">VERSI 1.5</span>
+            </h1>
             <div className="space-y-4">
-              <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full bg-black/60 border-white/10 p-5 rounded-2xl text-center font-bold text-xs text-white outline-none" placeholder="USERNAME" />
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-black/60 border-white/10 p-5 rounded-2xl text-center font-bold text-xs text-white outline-none" placeholder="PASSWORD" />
-              <button onClick={handleLogin} className="w-full py-5 bg-cyan-600 rounded-full font-black uppercase italic text-xs text-white flex items-center justify-center gap-3 active:scale-95 transition-all">
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full bg-black/60 border-white/10 p-5 rounded-2xl text-center font-bold text-xs text-white outline-none"
+                placeholder="USERNAME"
+              />
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-black/60 border-white/10 p-5 rounded-2xl text-center font-bold text-xs text-white outline-none"
+                placeholder="PASSWORD"
+              />
+              <button
+                onClick={handleLogin}
+                className="w-full py-5 bg-cyan-600 rounded-full font-black uppercase italic text-xs text-white flex items-center justify-center gap-3 active:scale-95 transition-all"
+              >
                 <Lock size={16}/> LOGIN
               </button>
             </div>
@@ -432,6 +450,7 @@ export default function YaeMikoDashboard() {
                   {userRole === "admin"? "ROLE: ADMIN" : `LIMIT: ${bugLimit}/5`}
                 </span>
               </div>
+
               <div className="bg-gradient-to-br from-white/10 to-transparent border-white/10 rounded-[2.5rem] p-6 mb-6 text-center backdrop-blur-md relative shadow-2xl overflow-hidden">
                 <div className="flex justify-between items-center absolute inset-x-2 top-1/2 -translate-y-1/2 z-10 px-2">
                    <button onClick={() => setActiveNav(prev => (prev - 1 + BUG_TYPES.length) % BUG_TYPES.length)} className="p-2 bg-black/40 rounded-full active:scale-90 transition-all"><ChevronLeft size={20}/></button>
@@ -458,24 +477,26 @@ export default function YaeMikoDashboard() {
                   </div>
                 </div>
               </div>
+
               <div className="relative mb-6">
                 <input value={targetNumber} onChange={(e) => setTargetNumber(e.target.value)} className="w-full bg-black/60 border-white/10 p-5 rounded-2xl text-center font-black italic text-lg text-cyan-400 pr-16 outline-none focus:border-cyan-500 transition-all" placeholder="628XXXXXXXX" />
                 <button onClick={copyToClipboard} className="absolute right-5 top-1/2 -translate-y-1/2 text-white/40 hover:text-cyan-400 transition-colors">
                   {isCopied? <CheckCircle2 size={24} className="text-green-500" /> : <Copy size={24} />}
                 </button>
               </div>
+
               <button onClick={handleSendBug} className="w-full py-5 bg-gradient-to-r from-pink-600 via-red-600 to-orange-600 rounded-[2.5rem] font-black uppercase italic text-xs text-white shadow-xl active:scale-95 transition-all">KIRIM BUG</button>
 
-              {/* BAGIAN 2: SENDER SELECTOR */}
+              {/* SENDER SELECTOR */}
               <div className="bg-white/5 border-white/10 rounded-3xl p-5 mt-4">
                 <div className="flex gap-2 mb-4">
-                  <button onClick={() => setSenderType("global")} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase ${senderType === "global"? "bg-cyan-600" : "bg-black/40"}`}>GLOBAL</button>
-                  <button onClick={() => setSenderType("pribadi")} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase ${senderType === "pribadi"? "bg-cyan-600" : "bg-black/40"}`}>PRIBADI</button>
+                  <button onClick={() => setSenderType("global")} className={`flex-1 py-3 rounded-xl text- font-black uppercase ${senderType === "global"? "bg-cyan-600" : "bg-black/40"}`}>GLOBAL</button>
+                  <button onClick={() => setSenderType("pribadi")} className={`flex-1 py-3 rounded-xl text- font-black uppercase ${senderType === "pribadi"? "bg-cyan-600" : "bg-black/40"}`}>PRIBADI</button>
                 </div>
                 {senderType === "pribadi" && (
                   <div className="space-y-3 animate-in fade-in">
                     <input value={senderNumber} onChange={(e) => setSenderNumber(e.target.value)} className="w-full bg-black border-white/10 p-3 rounded-xl text-center text-xs text-cyan-400 font-bold" placeholder="NOMOR SENDER (628...)" />
-                    <button onClick={handleRequestPairing} className="w-full py-3 bg-pink-600 rounded-xl font-black text-[10px] uppercase">REQUEST PAIRING</button>
+                    <button onClick={handleRequestPairing} className="w-full py-3 bg-pink-600 rounded-xl font-black text- uppercase">REQUEST PAIRING</button>
                   </div>
                 )}
               </div>
@@ -508,6 +529,7 @@ export default function YaeMikoDashboard() {
               </div>
             </div>
           )}
+
           <div className="fixed bottom-8 left-16 right-16 bg-[#0a1628]/95 border-white/10 p-4 rounded-[2.5rem] flex justify-around backdrop-blur-3xl z-20 shadow-2xl">
             <button onClick={() => setCurrentView('dashboard')} className={`p-1 transition-all ${currentView === 'dashboard'? 'text-cyan-400 scale-110' : 'text-white/20'}`}><LayoutDashboard size={22}/></button>
             <button onClick={() => setCurrentView('settings')} className={`p-1 transition-all ${currentView === 'settings'? 'text-cyan-400 scale-110' : 'text-white/20'}`}><Settings size={22}/></button>
@@ -517,14 +539,14 @@ export default function YaeMikoDashboard() {
 
       <style jsx global>{`
         @keyframes shake { 0% { transform: translate(2px, 2px); } 10% { transform: translate(-1px, -2px); } 100% { transform: translate(0); } }
-       .animate-shake_violent { animation: shake 0.1s infinite; }
+      .animate-shake_violent { animation: shake 0.1s infinite; }
         @keyframes rumble { 0%, 100% { background-color: rgba(69, 10, 10, 0.9); } 50% { background-color: rgba(127, 29, 29, 0.95); } }
-       .animate-bg_rumble { animation: rumble 0.15s infinite; }
+      .animate-bg_rumble { animation: rumble 0.15s infinite; }
         @keyframes glitch { 0% { text-shadow: 2px 0 #ff0000, -2px 0 #00ffff; } 100% { text-shadow: -2px 0 #ff0000, 2px 0 #00ffff; } }
-       .animate-glitch_extreme { animation: glitch 0.1s infinite; }
-       .animate-in { animation: fadeIn 0.5s ease-out forwards; }
+      .animate-glitch_extreme { animation: glitch 0.1s infinite; }
+      .animate-in { animation: fadeIn 0.5s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
     </div>
   )
-    }
+         }
