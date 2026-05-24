@@ -398,7 +398,7 @@ export default function YaeMikoDashboard() {
       )}
 
       {showRestrictedOverlay && (
-        &div className="fixed inset-0 z-[10006] bg-red-900/95 flex flex-col items-center justify-center p-8 text-center backdrop-blur-3xl animate-pulse">
+        div className="fixed inset-0 z-[10006] bg-red-900/95 flex flex-col items-center justify-center p-8 text-center backdrop-blur-3xl animate-pulse">
           <Shield className="w-40 h-40 text-white mb-6" />
           <h1 className="text-4xl font-black italic uppercase text-white tracking-tighter">ACCESS DENIED</h1>
           <p className="text-white/70 text-xs mt-4 mb-10 font-bold uppercase">MAU NGAPAIN LU KONTOL, NOMOR INI DALAM PERLINDUNGAN ADMIN SELZ</p>
