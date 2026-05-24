@@ -543,11 +543,13 @@ export default function YaeMikoDashboard() {
               </div>
             </div>
           )}
+
+          {/* NAV BAR HARUS DI DALAM SINI BIAR GAK ERROR */}
           <div className="fixed bottom-8 left-16 right-16 bg-[#0a1628]/95 border border-white/10 p-4 rounded-[2.5rem] flex justify-around backdrop-blur-3xl z-20 shadow-2xl">
             <button onClick={() => setCurrentView('dashboard')} className={`p-1 transition-all ${currentView === 'dashboard' ? 'text-cyan-400 scale-110' : 'text-white/20'}`}><LayoutDashboard size={22}/></button>
             <button onClick={() => setCurrentView('settings')} className={`p-1 transition-all ${currentView === 'settings' ? 'text-cyan-400 scale-110' : 'text-white/20'}`}><Settings size={22}/></button>
-          
-        </div>
+          </div>
+        </>
       )}
 
       <style jsx global>{`
@@ -562,4 +564,4 @@ export default function YaeMikoDashboard() {
       `}></style>
     </div>
   )
-}
+          }                
