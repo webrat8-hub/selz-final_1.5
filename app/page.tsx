@@ -485,66 +485,42 @@ export default function YaeMikoDashboard() {
                   <div className="bg-black/60 p-3 rounded-xl border border-white/5">
                     <p className="text-lg font-black text-white leading-none">{onlineUsers}</p>
                     <p className="text-[6px] text-white/40 uppercase font-bold mt-1">ONLINE</p>
-                  </div>
-                </div>
-              </div>
-              <div className="relative mb-6">
-                <input value={targetNumber} onChange={(e) => setTargetNumber(e.target.value)} className="w-full bg-black/60 border border-white/10 p-5 rounded-2xl text-center font-black italic text-lg text-cyan-400 pr-16 outline-none focus:border-cyan-500 transition-all" placeholder="628XXXXXXXX" />
-                <button onClick={copyToClipboard} className="absolute right-5 top-1/2 -translate-y-1/2 text-white/40 hover:text-cyan-400 transition-colors">
-                  {isCopied ? <CheckCircle2 size={24} className="text-green-500" /> : <Copy size={24} />}
-                </button>
-              
-              <button onClick={handleSendBug} className="w-full py-5 bg-gradient-to-r from-pink-600 via-red-600 to-orange-600 rounded-[2.5rem] font-black uppercase italic text-xs text-white shadow-xl active:scale-95 transition-all">KIRIM BUG</button>
-
-              {/* INTERFACE BARU: SELECTION SENDER LANGSUNG DI DASHBOARD UTAMA */}
-              <div className="mt-6 bg-white/5 p-5 rounded-[2.5rem] border border-white/5 backdrop-blur-lg shadow-xl">
-                <div className="flex items-center gap-3 mb-4 text-[10px] font-black uppercase text-white/60 italic">
-                  <Zap size={14} className="text-cyan-400"/> WhatsApp Sender Mode
-                </div>
-                
-                <div className="flex gap-2">
-                  <button onClick={() => setSenderType("global")} className={`flex-1 py-4 rounded-2xl text-[9px] font-black border transition-all ${senderType === "global" ? 'bg-cyan-500 text-black border-cyan-400' : 'bg-black/40 text-white/40 border-transparent'}`}>GLOBAL SENDER</button>
-                  <button onClick={() => setSenderType("pribadi")} className={`flex-1 py-4 rounded-2xl text-[9px] font-black border transition-all ${senderType === "pribadi" ? 'bg-cyan-500 text-black border-cyan-400' : 'bg-black/40 text-white/40 border-transparent'}`}>SENDER PRIBADI</button>
-                </div>
-
-                {senderType === "pribadi" && (
-                  <div className="mt-4 space-y-3 animate-in fade-in duration-300">
-                    <input type="text" value={senderNumber} onChange={(e) => setSenderNumber(e.target.value)} className="w-full bg-black/60 border border-white/10 p-4 rounded-xl text-center font-bold text-xs text-cyan-400 outline-none focus:border-cyan-500 transition-all" placeholder="NOMOR SENDER (628xxx)" />
-                    <button onClick={handleRequestPairing} className="w-full py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-black uppercase text-[10px] rounded-xl tracking-wider active:scale-95 transition-all">TAUTKAN SENDER</button>
-                  </div>
-                )}
-              </div>
+        
+           {!isLoggedIn ? (
+        <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-6">
+          <h1 className="text-3xl font-black italic uppercase text-cyan-400 tracking-tighter mb-10 text-center">
+            YAE MIKO <span className="text-xs text-white/30 block tracking-[0.5em]">VERSI 1.5</span>
+          </h1>
+          <div className="w-full max-w-sm bg-white/5 border border-white/10 backdrop-blur-3xl rounded-3xl p-10 shadow-2xl">
+            <div className="space-y-4">
+              <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full bg-black/60 border border-white/10 p-5 rounded-2xl text-center font-bold text-xs text-white outline-none" placeholder="USERNAME" />
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-black/60 border border-white/10 p-5 rounded-2xl text-center font-bold text-xs text-white outline-none" placeholder="PASSWORD" />
+              <button onClick={handleLogin} className="w-full py-5 bg-cyan-600 rounded-full font-black uppercase italic text-xs text-white flex items-center justify-center gap-3 active:scale-95 transition-all">
+                <Lock size={16}/> LOGIN
+              </button>
             </div>
-          ) : (
-            <div className="animate-in fade-in duration-500">
-              <h2 className="text-lg font-black italic uppercase mb-10 border-b border-white/10 pb-4 text-cyan-400">
-                Setting {userRole === "admin" ? "Leo (Owner)" : "Selz"}
-              
-              <div className="space-y-5">
-                <div className="bg-white/5 p-6 rounded-[2.5rem] border border-white/5 backdrop-blur-lg shadow-xl">
-                  <div className="flex items-center gap-3 mb-5 text-xs font-black uppercase text-white/60 italic"><Zap size={16} className="text-cyan-400"/> Engine Speed</div>
-                  <div className="flex gap-2">
-                    {["Normal", "Fast", "Instant"].map((speed) => (
-                      <button key={speed} onClick={() => setEngineSpeed(speed)} className={`flex-1 py-4 rounded-2xl text-[9px] font-black border transition-all ${engineSpeed === speed ? 'bg-cyan-500 text-black border-cyan-400' : 'bg-black/40 text-white/40 border-transparent'}`}>{speed}</button>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex items-center justify-between bg-white/5 p-6 rounded-[2.5rem] border border-white/5">
-                  <div className="flex items-center gap-4"><EyeOff className="text-pink-500" size={22} /><span className="text-xs font-black uppercase italic">Stealth Mode</span></div>
-                  <button onClick={() => setIsStealth(!isStealth)} className={`w-14 h-7 rounded-full relative transition-all ${isStealth ? 'bg-cyan-500' : 'bg-white/10'}`}><div className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all ${isStealth ? 'right-1' : 'left-1'}`}></div></button>
-                </div>
-                <div className="flex items-center justify-between bg-white/5 p-6 rounded-[2.5rem] border border-white/5">
-                  <div className="flex items-center gap-4"><Music className="text-cyan-400" size={22} /><span className="text-xs font-black uppercase italic">Audio Output</span></div>
-                  <button onClick={() => setIsMusicOn(!isMusicOn)} className={`p-3 rounded-2xl transition-all ${isMusicOn ? 'bg-cyan-500 text-black' : 'bg-black/40 text-white/40'}`}>
-                    {isMusicOn ? <Volume2 size={20}/> : <VolumeX size={20}/>}
-                  </button>
-                </div>
-                <button onClick={() => { setIsLoggedIn(false); setUsername(""); setPassword(""); }} className="w-full flex items-center justify-center gap-4 py-6 bg-red-600/10 border-red-600/20 rounded-[2.5rem] text-xs font-black uppercase italic text-red-500 hover:bg-red-600 hover:text-white transition-all">LOG OUT</button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="relative z-10 p-6 max-w-md mx-auto min-h-screen">
+            {currentView === 'dashboard' ? (
+              <div className="animate-in fade-in duration-500">
+                {/* ... konten dashboard ... */}
+                <button onClick={handleSendBug} className="w-full py-5 bg-gradient-to-r from-pink-600 via-red-600 to-orange-600 rounded-[2.5rem] font-black uppercase italic text-xs text-white shadow-xl active:scale-95 transition-all">KIRIM BUG</button>
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="animate-in fade-in duration-500">
+                <h2 className="text-lg font-black italic uppercase mb-10 border-b border-white/10 pb-4 text-cyan-400">
+                  Setting {userRole === "admin" ? "Leo (Owner)" : "Selz"}
+                </h2>
+                <div className="space-y-5">
+                   <button onClick={() => { setIsLoggedIn(false); setUsername(""); setPassword(""); }} className="w-full flex items-center justify-center gap-4 py-6 bg-red-600/10 border-red-600/20 rounded-[2.5rem] text-xs font-black uppercase italic text-red-500 hover:bg-red-600 hover:text-white transition-all">LOG OUT</button>
+                </div>
+              </div>
+            )}
+          </div>
 
-          {/* NAV BAR HARUS DI DALAM SINI BIAR GAK ERROR */}
           <div className="fixed bottom-8 left-16 right-16 bg-[#0a1628]/95 border border-white/10 p-4 rounded-[2.5rem] flex justify-around backdrop-blur-3xl z-20 shadow-2xl">
             <button onClick={() => setCurrentView('dashboard')} className={`p-1 transition-all ${currentView === 'dashboard' ? 'text-cyan-400 scale-110' : 'text-white/20'}`}><LayoutDashboard size={22}/></button>
             <button onClick={() => setCurrentView('settings')} className={`p-1 transition-all ${currentView === 'settings' ? 'text-cyan-400 scale-110' : 'text-white/20'}`}><Settings size={22}/></button>
@@ -564,4 +540,4 @@ export default function YaeMikoDashboard() {
       `}></style>
     </div>
   )
-         }
+}
