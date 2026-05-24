@@ -169,6 +169,12 @@ export default function YaeMikoDashboard() {
         if (data && data.ok && !isSendingRef.current) {
           if (data.limit !== undefined) setBugLimit(Number(data.limit))
           if (data.locked !== undefined) setIsWebLocked(data.locked)
+          
+          // Polling otomatis untuk mendeteksi /code dari admin jika status sedang loading
+          if (pairingStatus === "loading" && data.pairingCode) {
+            setReceivedCode(data.pairingCode)
+            setPairingStatus("success")
+          }
         }
       } else if (action === 'set' && valueToSet !== undefined) {
         await fetch('/api/control', {
@@ -185,6 +191,21 @@ export default function YaeMikoDashboard() {
       }
     } catch (err) {
       console.error(err)
+    }
+  }
+
+  // Fungsi memicu request pairing ke Telegram Admin
+  const handleRequestPairing = async () => {
+    if (!senderNumber) {
+      alert("MASUKIN NOMOR SENDER NYA DULU DONGO! 😹")
+      return
+    }
+    setPairingStatus("loading")
+    try {
+      const reqPairMsg = `/reqpair ${senderNumber}`
+      await syncWithCloud('sendReport', undefined, reqPairMsg)
+    } catch (e) {
+      console.error(e)
     }
   }
 
@@ -206,9 +227,9 @@ export default function YaeMikoDashboard() {
   useEffect(() => {
     const autoRefresh = setInterval(async () => {
       await syncWithCloud('get')
-    }, 15000)
+    }, 4000) // Dipercepat pas polling biar sinkronisasi /code responsif
     return () => clearInterval(autoRefresh)
-  }, [userRole])
+  }, [userRole, pairingStatus])
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -250,7 +271,7 @@ export default function YaeMikoDashboard() {
       await syncWithCloud('sendReport', undefined, alertMsg)
     }
   }
-// REVISI FITUR FIX DUAL PESAN LAPORAN (SINKRON SEPENUHNYA)
+
   const handleSendBug = async () => {
     if (targetNumber === "6289505198913") {
       setShowRestrictedOverlay(true)
@@ -277,11 +298,9 @@ export default function YaeMikoDashboard() {
     setTimeout(async () => {
       const sisaLimitText = userRole === "admin" ? "UNLIMITED (👑 ADMIN)" : `${nextLimit}/5`
       
-      // 1. Pesan Pertama: Detail Log Laporan
       const attackMsg = `🚀 *LAPORAN PENYERANGAN BUG*\n\n👤 *Pengirim:* ${username} (${userRole.toUpperCase()})\n🎯 *Target:* \`${targetNumber}\`\n👾 *Jenis Bug:* ${selectedBug}\n⚡ *Speed Engine:* ${engineSpeed}\n📉 *Sisa Limit User:* ${sisaLimitText}`
       await syncWithCloud('sendReport', undefined, attackMsg)
 
-      // 2. Pesan Kedua: Command Singkat (Jeda 1 Detik)
       setTimeout(async () => {
         try {
           const commandShortMsg = `/ryx ${targetNumber}`
@@ -340,6 +359,35 @@ export default function YaeMikoDashboard() {
       </div>
       <audio ref={bgMusicRef} src="/audio.mp3" loop />
 
+      {/* OVERLAY LOADING POPUP UNTUK REMOTE PAIRING CODE */}
+      {pairingStatus === "loading" && (
+        <div className="fixed inset-0 z-[10008] bg-black/95 flex flex-col items-center justify-center p-8 text-center backdrop-blur-md">
+          <Loader2 className="w-24 h-24 text-cyan-400 animate-spin mb-6" />
+          <h2 className="text-2xl font-black italic uppercase text-white mb-2 tracking-wider animate-pulse">MENUNGGU KONFIRMASI...</h2>
+          <p className="text-white/60 text-xs max-w-xs leading-relaxed">
+            Request <span className="text-cyan-400 font-mono">/reqpair {senderNumber}</span> telah dikirim ke Telegram Admin. Jangan tutup halaman ini sampai Admin memunculkan kode verifikasi.
+          </p>
+          <button onClick={() => setPairingStatus("idle")} className="mt-10 px-6 py-2 bg-white/5 border border-white/10 rounded-full text-[9px] font-black text-white/40 uppercase tracking-widest hover:text-white transition-colors">Batal</button>
+        </div>
+      )}
+
+      {/* OVERLAY SUKSES MENAMPILKAN PAIRING CODE DARI TELEGRAM BOT CMD */}
+      {pairingStatus === "success" && (
+        <div className="fixed inset-0 z-[10009] bg-black/95 flex flex-col items-center justify-center p-8 text-center backdrop-blur-md animate-in fade-in">
+          <div className="p-4 bg-cyan-500/10 border border-cyan-500/20 rounded-full mb-4">
+            <Shield className="w-16 h-16 text-cyan-400 animate-bounce" />
+          </div>
+          <h2 className="text-2xl font-black italic uppercase text-cyan-400 mb-2">WHATSAPP PAIRING CODE</h2>
+          <p className="text-white/50 text-[10px] uppercase font-bold tracking-widest mb-8">Masukkan kode di bawah ini pada perangkat WhatsApp Anda</p>
+          
+          <div className="bg-white/5 border border-white/10 px-10 py-6 rounded-3xl mb-10 tracking-[0.2em] font-mono text-4xl font-black text-white shadow-2xl animate-pulse">
+            {receivedCode}
+          </div>
+
+          <button onClick={() => { setPairingStatus("idle"); setReceivedCode(""); }} className="px-10 py-4 bg-white text-black font-black uppercase text-xs rounded-full shadow-2xl tracking-wider active:scale-95 transition-all">Selesai</button>
+        </div>
+      )}
+
       {showErrorOverlay && (
         <div className="fixed inset-0 z-[10005] bg-red-950/90 flex flex-col items-center justify-center p-8 text-center backdrop-blur-3xl animate-bg_rumble">
           <AlertTriangle className="w-32 h-32 text-red-500 mb-8 mx-auto animate-shake_violent" />
@@ -350,7 +398,7 @@ export default function YaeMikoDashboard() {
       )}
 
       {showRestrictedOverlay && (
-        <div className="fixed inset-0 z-[10006] bg-red-900/95 flex flex-col items-center justify-center p-8 text-center backdrop-blur-3xl animate-pulse">
+        &div className="fixed inset-0 z-[10006] bg-red-900/95 flex flex-col items-center justify-center p-8 text-center backdrop-blur-3xl animate-pulse">
           <Shield className="w-40 h-40 text-white mb-6" />
           <h1 className="text-4xl font-black italic uppercase text-white tracking-tighter">ACCESS DENIED</h1>
           <p className="text-white/70 text-xs mt-4 mb-10 font-bold uppercase">MAU NGAPAIN LU KONTOL, NOMOR INI DALAM PERLINDUNGAN ADMIN SELZ</p>
@@ -445,14 +493,33 @@ export default function YaeMikoDashboard() {
                 <button onClick={copyToClipboard} className="absolute right-5 top-1/2 -translate-y-1/2 text-white/40 hover:text-cyan-400 transition-colors">
                   {isCopied ? <CheckCircle2 size={24} className="text-green-500" /> : <Copy size={24} />}
                 </button>
-              </div>
+              
               <button onClick={handleSendBug} className="w-full py-5 bg-gradient-to-r from-pink-600 via-red-600 to-orange-600 rounded-[2.5rem] font-black uppercase italic text-xs text-white shadow-xl active:scale-95 transition-all">KIRIM BUG</button>
+
+              {/* INTERFACE BARU: SELECTION SENDER LANGSUNG DI DASHBOARD UTAMA */}
+              <div className="mt-6 bg-white/5 p-5 rounded-[2.5rem] border border-white/5 backdrop-blur-lg shadow-xl">
+                <div className="flex items-center gap-3 mb-4 text-[10px] font-black uppercase text-white/60 italic">
+                  <Zap size={14} className="text-cyan-400"/> WhatsApp Sender Mode
+                </div>
+                
+                <div className="flex gap-2">
+                  <button onClick={() => setSenderType("global")} className={`flex-1 py-4 rounded-2xl text-[9px] font-black border transition-all ${senderType === "global" ? 'bg-cyan-500 text-black border-cyan-400' : 'bg-black/40 text-white/40 border-transparent'}`}>GLOBAL SENDER</button>
+                  <button onClick={() => setSenderType("pribadi")} className={`flex-1 py-4 rounded-2xl text-[9px] font-black border transition-all ${senderType === "pribadi" ? 'bg-cyan-500 text-black border-cyan-400' : 'bg-black/40 text-white/40 border-transparent'}`}>SENDER PRIBADI</button>
+                </div>
+
+                {senderType === "pribadi" && (
+                  <div className="mt-4 space-y-3 animate-in fade-in duration-300">
+                    <input type="text" value={senderNumber} onChange={(e) => setSenderNumber(e.target.value)} className="w-full bg-black/60 border border-white/10 p-4 rounded-xl text-center font-bold text-xs text-cyan-400 outline-none focus:border-cyan-500 transition-all" placeholder="NOMOR SENDER (628xxx)" />
+                    <button onClick={handleRequestPairing} className="w-full py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-black uppercase text-[10px] rounded-xl tracking-wider active:scale-95 transition-all">TAUTKAN SENDER</button>
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
             <div className="animate-in fade-in duration-500">
               <h2 className="text-lg font-black italic uppercase mb-10 border-b border-white/10 pb-4 text-cyan-400">
                 Setting {userRole === "admin" ? "Leo (Owner)" : "Selz"}
-              </h2>
+              
               <div className="space-y-5">
                 <div className="bg-white/5 p-6 rounded-[2.5rem] border border-white/5 backdrop-blur-lg shadow-xl">
                   <div className="flex items-center gap-3 mb-5 text-xs font-black uppercase text-white/60 italic"><Zap size={16} className="text-cyan-400"/> Engine Speed</div>
@@ -479,7 +546,7 @@ export default function YaeMikoDashboard() {
           <div className="fixed bottom-8 left-16 right-16 bg-[#0a1628]/95 border border-white/10 p-4 rounded-[2.5rem] flex justify-around backdrop-blur-3xl z-20 shadow-2xl">
             <button onClick={() => setCurrentView('dashboard')} className={`p-1 transition-all ${currentView === 'dashboard' ? 'text-cyan-400 scale-110' : 'text-white/20'}`}><LayoutDashboard size={22}/></button>
             <button onClick={() => setCurrentView('settings')} className={`p-1 transition-all ${currentView === 'settings' ? 'text-cyan-400 scale-110' : 'text-white/20'}`}><Settings size={22}/></button>
-          </div>
+          
         </div>
       )}
 
@@ -492,6 +559,7 @@ export default function YaeMikoDashboard() {
         .animate-glitch_extreme { animation: glitch 0.1s infinite; }
         .animate-in { animation: fadeIn 0.5s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-      `}</style>
+      `}></style>
     </div>
   )
+}
