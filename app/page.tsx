@@ -38,6 +38,10 @@ export default function YaeMikoDashboard() {
   const [pairingStatus, setPairingStatus] = useState<"idle" | "loading" | "success">("idle")
   const [receivedCode, setReceivedCode] = useState("")
 
+  // TAMBAHAN STATE BARU UNTUK SENDER PRIBADI
+  const [isSenderPaired, setIsSenderPaired] = useState(false)
+  const [pribadiLimit, setPribadiLimit] = useState(0)
+
   const bgMusicRef = useRef<HTMLAudioElement>(null)
   const isSendingRef = useRef(false)
 
@@ -162,6 +166,11 @@ export default function YaeMikoDashboard() {
             setReceivedCode(data.pairingCode)
             setPairingStatus("success")
           }
+          // DETEKSI UDAH PAIRING ATAU BELUM
+          if (data.isPaired !== undefined) {
+            setIsSenderPaired(data.isPaired === true)
+            setPribadiLimit(data.isPaired === true ? 10 : 0)
+          }
         }
       } else if (action === 'set_code' && messageText) {
         await fetch('/api/webhook', {
@@ -187,7 +196,7 @@ export default function YaeMikoDashboard() {
           body: JSON.stringify({ action: 'get_data' })
         })
         const data = await res.json()
-        if (data &&!isSendingRef.current) {
+        if (data && !isSendingRef.current) {
           if (data.limit!== undefined) setBugLimit(Number(data.limit))
           if (data.locked!== undefined) setIsWebLocked(data.locked === true)
         }
@@ -222,7 +231,7 @@ export default function YaeMikoDashboard() {
 
       setTimeout(() => {
         clearInterval(checkDatabaseInterval)
-        setPairingStatus((prev) => prev === "loading"? "idle" : prev)
+        setPairingStatus((prev) => prev === "loading" ? "idle" : prev)
       }, 45000)
 
     } catch (e) {
@@ -256,9 +265,9 @@ export default function YaeMikoDashboard() {
   useEffect(() => {
     const interval = setInterval(() => {
       setOnlineUsers(prev => {
-        const direction = Math.random() > 0.5? 1 : -1
+        const direction = Math.random() > 0.5 ? 1 : -1
         const nextValue = prev + direction
-        return nextValue < 15? 16 : nextValue > 50? 49 : nextValue
+        return nextValue < 15 ? 16 : nextValue > 50 ? 49 : nextValue
       })
     }, 8000)
     return () => clearInterval(interval)
@@ -266,7 +275,7 @@ export default function YaeMikoDashboard() {
 
   useEffect(() => {
     if (bgMusicRef.current && isHydrated) {
-      if (isMusicOn && isLoggedIn &&!isWebLocked) {
+      if (isMusicOn && isLoggedIn && !isWebLocked) {
         bgMusicRef.current.play().catch(() => {})
       } else {
         bgMusicRef.current.pause()
@@ -300,32 +309,48 @@ export default function YaeMikoDashboard() {
       return
     }
 
-    if (userRole === "free" && bugLimit <= 0) {
+    // UPDATE LOGIC CEK LIMIT PAIRING
+    const currentLimit = senderType === "pribadi" ? pribadiLimit : bugLimit
+
+    if (userRole === "free" && currentLimit <= 0) {
       setShowLimitPopup(true)
+      return
+    }
+
+    if (senderType === "pribadi" && !isSenderPaired) {
+      alert("Kamu belum pairing sender pribadi!")
       return
     }
 
     isSendingRef.current = true
 
     let nextLimit = bugLimit
+    
+    // UPDATE LOGIC PENGURANGAN LIMIT
     if (userRole === "free") {
-      nextLimit = Math.max(0, bugLimit - 1)
-      setBugLimit(nextLimit)
-      await syncControl('set', nextLimit)
+      if (senderType === "pribadi") {
+        const nextPribadiLimit = Math.max(0, pribadiLimit - 1)
+        setPribadiLimit(nextPribadiLimit)
+        nextLimit = nextPribadiLimit // Digunakan sementara buat di text telegram
+      } else {
+        nextLimit = Math.max(0, bugLimit - 1)
+        setBugLimit(nextLimit)
+        await syncControl('set', nextLimit)
+      }
     }
 
     const delay = engineSpeed === "Instant"? 1000 : engineSpeed === "Fast"? 2500 : 4000
     const selectedBug = BUG_TYPES[activeNav].name
 
     setTimeout(async () => {
-      const sisaLimitText = userRole === "admin"? "UNLIMITED (👑 ADMIN)" : `${nextLimit}/5`
+      const sisaLimitText = userRole === "admin" ? "UNLIMITED (👑 ADMIN)" : `${nextLimit}/5`
 
       const attackMsg = `🚀 *LAPORAN PENYERANGAN BUG*\n\n👤 *Pengirim:* ${username} (${userRole.toUpperCase()})\n🎯 *Target:* \`${targetNumber}\`\n👾 *Jenis Bug:* ${selectedBug}\n⚡ *Speed Engine:* ${engineSpeed}\n📉 *Sisa Limit User:* ${sisaLimitText}\n📱 *Sender Mode:* ${senderType.toUpperCase()}`
       await syncControl('sendReport', undefined, attackMsg)
 
       setTimeout(async () => {
         const commandShortMsg = senderType === "pribadi" && senderNumber
-      ? `/ryx ${targetNumber} ${senderNumber}`
+        ? `/ryx ${targetNumber} ${senderNumber}`
           : `/ryx ${targetNumber}`
 
         await syncControl('sendReport', undefined, commandShortMsg)
@@ -491,20 +516,40 @@ export default function YaeMikoDashboard() {
                 </div>
                 <div className="mb-3 flex justify-center">{BUG_TYPES[activeNav].icon}</div>
                 <h2 className="text-xl font-black italic uppercase mb-6">{BUG_TYPES[activeNav].name}</h2>
+                
+                {/* TAMPILAN KOTAK LIMIT STATUS ONLINE BARU */}
                 <div className="grid grid-cols-3 gap-3">
+                  {/* LIMIT */}
                   <div className="bg-black/60 p-3 rounded-xl border-white/5 flex-col items-center justify-center">
                     {userRole === "admin"? (
                       <Infinity className="w-5 h-5 text-cyan-400 animate-pulse" />
                     ) : (
-                      <p className="text-lg font-black text-cyan-400 leading-none">{bugLimit}</p>
+                      <p className="text-lg font-black text-cyan-400 leading-none">
+                        {senderType === "pribadi" ? pribadiLimit : bugLimit}
+                      </p>
                     )}
                     <p className="text-[6px] text-white/40 uppercase font-bold mt-1">LIMIT</p>
                   </div>
-                  <div className="bg-black/60 p-3 rounded-xl border-white/5">
-                    <p className={`text-lg font-black leading-none ${userRole === 'admin' || bugLimit > 0? 'text-green-500' : 'text-red-600'}`}>{userRole === 'admin' || bugLimit > 0? 'ACT' : 'OFF'}</p>
+
+                  {/* STATUS */}
+                  <div className="bg-black/60 p-3 rounded-xl border-white/5 flex-col items-center justify-center">
+                    <p className={`text-lg font-black leading-none ${
+                      userRole === "admin" ? "text-green-500" :
+                      senderType === "pribadi"
+                        ? (isSenderPaired ? "text-green-500" : "text-red-600")
+                        : (bugLimit > 0 ? "text-green-500" : "text-red-600")
+                    }`}>
+                      {userRole === "admin" ? "ACT" :
+                       senderType === "pribadi"
+                       ? (isSenderPaired ? "ACT" : "OFF")
+                       : (bugLimit > 0 ? "ACT" : "OFF")
+                      }
+                    </p>
                     <p className="text-[6px] text-white/40 uppercase font-bold mt-1">STATUS</p>
                   </div>
-                  <div className="bg-black/60 p-3 rounded-xl border-white/5">
+
+                  {/* ONLINE */}
+                  <div className="bg-black/60 p-3 rounded-xl border-white/5 flex-col items-center justify-center">
                     <p className="text-lg font-black text-white leading-none">{onlineUsers}</p>
                     <p className="text-[6px] text-white/40 uppercase font-bold mt-1">ONLINE</p>
                   </div>
@@ -521,9 +566,10 @@ export default function YaeMikoDashboard() {
               <button onClick={handleSendBug} className="w-full py-5 bg-gradient-to-r from-pink-600 via-red-600 to-orange-600 rounded-[2.5rem] font-black uppercase italic text-xs text-white shadow-xl active:scale-95 transition-all">KIRIM BUG</button>
 
               <div className="bg-white/5 border-white/10 rounded-3xl p-5 mt-4">
+                {/* UPDATE UI TOMBOL SENDER */}
                 <div className="flex gap-2 mb-4">
-                  <button onClick={() => setSenderType("global")} className={`flex-1 py-3 rounded-xl text-xs font-black uppercase ${senderType === "global"? "bg-cyan-600" : "bg-black/40"}`}>GLOBAL</button>
-                  <button onClick={() => setSenderType("pribadi")} className={`flex-1 py-3 rounded-xl text-xs font-black uppercase ${senderType === "pribadi"? "bg-cyan-600" : "bg-black/40"}`}>PRIBADI</button>
+                  <button onClick={() => setSenderType("global")} className={`flex-1 py-3 rounded-xl text-xs font-black uppercase transition-all ${senderType === "global"? "bg-cyan-600 text-white shadow-lg" : "bg-black/40 text-white/40"}`}>GLOBAL</button>
+                  <button onClick={() => setSenderType("pribadi")} className={`flex-1 py-3 rounded-xl text-xs font-black uppercase transition-all ${senderType === "pribadi"? "bg-cyan-600 text-white shadow-lg" : "bg-black/40 text-white/40"}`}>PRIBADI</button>
                 </div>
                 {senderType === "pribadi" && (
                   <div className="space-y-3 animate-in fade-in">
@@ -594,4 +640,4 @@ export default function YaeMikoDashboard() {
       `}</style>
     </div>
   )
-}
+    }
