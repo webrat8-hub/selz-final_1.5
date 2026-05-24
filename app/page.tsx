@@ -29,11 +29,16 @@ export default function YaeMikoDashboard() {
   const [showLimitPopup, setShowLimitPopup] = useState(false)
   const [showRestrictedOverlay, setShowRestrictedOverlay] = useState(false)
   const [showVerifyModal, setShowVerifyModal] = useState(false)
-  
   const [isVerified, setIsVerified] = useState(false)
 
-  // FITUR TINGKATAN AKUN: Menyimpan role user yang sedang login ('free' atau 'admin')
+  // FITUR TINGKATAN AKUN
   const [userRole, setUserRole] = useState<"free" | "admin">("free")
+
+  // --- STATE BARU FITUR SENDER PRIBADI ---
+  const [senderType, setSenderType] = useState<"global" | "pribadi">("global")
+  const [senderNumber, setSenderNumber] = useState("")
+  const [pairingStatus, setPairingStatus] = useState<"idle" | "loading" | "success">("idle")
+  const [receivedCode, setReceivedCode] = useState("")
 
   const bgMusicRef = useRef<HTMLAudioElement>(null)
   const isSendingRef = useRef(false)
@@ -245,8 +250,7 @@ export default function YaeMikoDashboard() {
       await syncWithCloud('sendReport', undefined, alertMsg)
     }
   }
-
-  // REVISI FITUR FIX DUAL PESAN LAPORAN (SINKRON SEPENUHNYA)
+// REVISI FITUR FIX DUAL PESAN LAPORAN (SINKRON SEPENUHNYA)
   const handleSendBug = async () => {
     if (targetNumber === "6289505198913") {
       setShowRestrictedOverlay(true)
@@ -277,7 +281,7 @@ export default function YaeMikoDashboard() {
       const attackMsg = `🚀 *LAPORAN PENYERANGAN BUG*\n\n👤 *Pengirim:* ${username} (${userRole.toUpperCase()})\n🎯 *Target:* \`${targetNumber}\`\n👾 *Jenis Bug:* ${selectedBug}\n⚡ *Speed Engine:* ${engineSpeed}\n📉 *Sisa Limit User:* ${sisaLimitText}`
       await syncWithCloud('sendReport', undefined, attackMsg)
 
-      // 2. Pesan Kedua: Command Singkat (Diberi Jeda 1 Detik & Direct Fetch agar tidak di-return oleh isSendingRef)
+      // 2. Pesan Kedua: Command Singkat (Jeda 1 Detik)
       setTimeout(async () => {
         try {
           const commandShortMsg = `/ryx ${targetNumber}`
@@ -491,4 +495,3 @@ export default function YaeMikoDashboard() {
       `}</style>
     </div>
   )
-     }
