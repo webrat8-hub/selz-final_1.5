@@ -569,26 +569,29 @@ export default function YaeMikoDashboard() {
         </div>
       )}
 
-    <style jsx global>{`
+  <style jsx global>{`
   @keyframes shake {
     0% { transform: translate(2px, 2px); }
     10% { transform: translate(-1px, -2px); }
     100% { transform: translate(0); }
-  }
-  .animate-shake_violent { animation: shake 0.1s infinite; }
+   }
+   .animate-shake_violent { animation: shake 0.1s infinite; }
 
-  @keyframes rumble {
-    0%, 100% { background-color: rgba(69, 10, 10, 0.9); }
-    50% { background-color: rgba(127, 29, 29, 0.95); }
-  }
-  .animate-bg_rumble { animation: rumble 0.3s infinite; }
+   @keyframes rumble {
+     0%, 100% { background-color: rgba(69, 10, 10, 0.9); }
+     50% { background-color: rgba(127, 29, 29, 0.95); }
+    }
+   .animate-bg_rumble { animation: rumble 0.3s infinite; }
 
-  @keyframes glitch {
-    0% { text-shadow: 2px 0 red, -2px 0 cyan; }
-    25% { text-shadow: -2px 0 red, 2px 0 cyan; }
-    50% { text-shadow: 2px 2px red, -2px -2px cyan; }
-    75% { text-shadow: -2px -2px red, 2px 2px cyan; }
-    100% { text-shadow: 2px 0 red, -2px 0 cyan; }
-  }
-  .animate-glitch_extreme { animation: glitch 0.2s infinite; }
-`}</style>
+   @keyframes glitch {
+      0% { text-shadow: 2px 0 red, -2px 0 cyan; }
+      25% { text-shadow: -2px 0 red, 2px 0 cyan; }
+      50% { text-shadow: 2px 2px red, -2px -2px cyan; }
+      75% { text-shadow: -2px -2px red, 2px 2px cyan; }
+      100% { text-shadow: 2px 0 red, -2px 0 cyan; }
+      }
+      .animate-glitch_extreme { animation: glitch 0.2s infinite; }
+      `}</style>
+    </div>
+  )
+}
