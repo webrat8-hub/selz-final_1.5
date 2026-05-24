@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react"
 import {
   Shield, Bug, LayoutDashboard, Settings, Loader2, ChevronLeft, ChevronRight,
   ZapOff, Activity, Ghost, Skull, Ban, Infinity, Lock, AlertTriangle,
-  ExternalLink, Volume2, VolumeX, Copy, CheckCircle2
+  ExternalLink
 } from "lucide-react"
 
 // ========== KONFIGURASI ==========
@@ -38,12 +38,11 @@ export default function YaeMikoDashboard() {
   const [isWebLocked, setIsWebLocked] = useState(false)
   const [isSending, setIsSending] = useState(false)
   const [engineSpeed, setEngineSpeed] = useState("Normal")
-  const [activeNav, setActiveNav] = useState(0)
+  const [activeNav, setActiveNav] = useState<number>(0)
   const [currentView, setCurrentView] = useState<"dashboard" | "settings">("dashboard")
 
   const [isMusicOn, setIsMusicOn] = useState(true)
   const [isStealth, setIsStealth] = useState(false)
-  const [isCopied, setIsCopied] = useState(false)
   const [onlineUsers, setOnlineUsers] = useState(38)
   const [isVerified, setIsVerified] = useState(false)
 
@@ -54,7 +53,6 @@ export default function YaeMikoDashboard() {
   const [showVerifyModal, setShowVerifyModal] = useState(false)
 
   // Sender Pribadi States
-  const [senderType, setSenderType] = useState<SenderType>("global")
   const [senderNumber, setSenderNumber] = useState("")
   const [pairingStatus, setPairingStatus] = useState<PairingStatus>("idle")
   const [receivedCode, setReceivedCode] = useState("")
@@ -293,14 +291,6 @@ export default function YaeMikoDashboard() {
     }, delay)
   }
 
-  const copyToClipboard = () => {
-    if (targetNumber) {
-      navigator.clipboard.writeText(targetNumber)
-      setIsCopied(true)
-      setTimeout(() => setIsCopied(false), 2000)
-    }
-  }
-
   // ========== EFFECTS ==========
 
   useEffect(() => {
@@ -509,9 +499,9 @@ const DashboardView = ({
       </span>
       <span className={`text-xs font-black uppercase px-4 py-1 rounded-full border ${
         userRole === 'admin'
-         ? 'text-cyan-400 border-cyan-500/20 bg-cyan-500/10'
+        ? 'text-cyan-400 border-cyan-500/20 bg-cyan-500/10'
           : bugLimit > 0
-           ? 'text-pink-500 border-pink-500/20 bg-pink-500/10'
+          ? 'text-pink-500 border-pink-500/20 bg-pink-500/10'
             : 'text-red-500 border-red-500/20 bg-red-500/10'
       }`}>
         {userRole === "admin"? "ROLE: ADMIN" : `LIMIT: ${bugLimit}/5`}
@@ -547,13 +537,13 @@ const BugSelector = ({ activeNav, setActiveNav, userRole, bugLimit, onlineUsers 
   <div className="bg-gradient-to-br from-white/10 to-transparent border-white/10 rounded-[2.5rem] p-6 mb-6 text-center backdrop-blur-md relative shadow-2xl overflow-hidden">
     <div className="flex justify-between items-center absolute inset-x-2 top-1/2 -translate-y-1/2 z-10 px-2">
       <button
-        onClick={() => setActiveNav(prev => (prev - 1 + BUG_TYPES.length) % BUG_TYPES.length)}
+        onClick={() => setActiveNav((prev: number) => (prev - 1 + BUG_TYPES.length) % BUG_TYPES.length)}
         className="p-2 bg-black/40 rounded-full active:scale-90 transition-all"
       >
         <ChevronLeft size={20}/>
       </button>
       <button
-        onClick={() => setActiveNav(prev => (prev + 1) % BUG_TYPES.length)}
+        onClick={() => setActiveNav((prev: number) => (prev + 1) % BUG_TYPES.length)}
         className="p-2 bg-black/40 rounded-full active:scale-90 transition-all"
       >
         <ChevronRight size={20}/>
