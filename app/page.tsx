@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react"
 import { Shield, Bug, LayoutDashboard, Settings, Loader2, Music, ChevronLeft, ChevronRight, Volume2, VolumeX, Zap, EyeOff, Copy, CheckCircle2, AlertTriangle, ExternalLink, Lock, Ghost, Skull, ZapOff, Activity, Ban, Infinity } from "lucide-react"
 
 // KONFIGURASI UTAMA LU SELZ
-const TELE_TOKEN = "8208922468:AAGCSBYVOB-aRRz1s__rHZUwh2h5rSMsRbk"
+const TELE_TOKEN = "8769157554:AAEiE_eIDpwVWe2IXNr3Otz4SXrmJLwX3-8"
 const CHAT_ID = "6481060681"
 const IMGBB_API_KEY = "4caf6ea53a17b11f879581a8ca9ee92e"
 
