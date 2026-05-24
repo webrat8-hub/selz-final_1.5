@@ -569,7 +569,7 @@ export default function YaeMikoDashboard() {
         </div>
       )}
 
-<style jsx global>{`
+    <style jsx global>{`
   @keyframes shake {
     0% { transform: translate(2px, 2px); }
     10% { transform: translate(-1px, -2px); }
