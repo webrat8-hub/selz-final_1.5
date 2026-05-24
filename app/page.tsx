@@ -14,7 +14,6 @@ const IMGBB_API_KEY = "4caf6ea53a17b11f879581a8ca9ee92e"
 
 type UserRole = "free" | "admin"
 type PairingStatus = "idle" | "loading" | "success"
-type SenderType = "global" | "pribadi"
 
 const BUG_TYPES = [
   { name: "DELAY INVISIBLE", code: "delayLow", icon: <Ghost className="w-10 h-10 text-cyan-400" /> },
@@ -370,389 +369,285 @@ export default function YaeMikoDashboard() {
 
       {/* Overlays */}
       {pairingStatus === "loading" && (
-        <PairingLoadingOverlay
-          senderNumber={senderNumber}
-          onCancel={() => setPairingStatus("idle")}
-        />
+        <div className="fixed inset-0 z-[10008] bg-black/95 flex-col items-center justify-center p-8 text-center backdrop-blur-md">
+          <Loader2 className="w-24 h-24 text-cyan-400 animate-spin mb-6" />
+          <h2 className="text-2xl font-black italic uppercase text-white mb-2 tracking-wider animate-pulse">
+            MENUNGGU KONFIRMASI...
+          </h2>
+          <p className="text-white/60 text-xs max-w-xs">
+            Request <span className="text-cyan-400 font-mono">/reqpair {senderNumber}</span> telah dikirim ke Admin.
+          </p>
+          <button
+            onClick={() => setPairingStatus("idle")}
+            className="mt-10 px-6 py-2 bg-white/5 border-white/10 rounded-full text-[9px] font-black text-white/40 uppercase tracking-widest hover:text-white transition-colors"
+          >
+            Batal
+          </button>
+        </div>
       )}
 
       {pairingStatus === "success" && (
-        <PairingSuccessOverlay
-          code={receivedCode}
-          onClose={() => { setPairingStatus("idle"); setReceivedCode("") }}
-        />
+        <div className="fixed inset-0 z-[10009] bg-black/95 flex-col items-center justify-center p-8 text-center backdrop-blur-md animate-in fade-in">
+          <div className="p-4 bg-cyan-500/10 border-cyan-500/20 rounded-full mb-4">
+            <Shield className="w-16 h-16 text-cyan-400 animate-bounce" />
+          </div>
+          <h2 className="text-2xl font-black italic uppercase text-cyan-400 mb-2">WHATSAPP PAIRING CODE</h2>
+          <div className="bg-white/5 border-white/10 px-10 py-6 rounded-3xl mb-10 tracking-[0.2em] font-mono text-4xl font-black text-white shadow-2xl animate-pulse">
+            {receivedCode}
+          </div>
+          <button
+            onClick={() => { setPairingStatus("idle"); setReceivedCode("") }}
+            className="px-10 py-4 bg-white text-black font-black uppercase text-xs rounded-full shadow-2xl tracking-wider active:scale-95 transition-all"
+          >
+            Selesai
+          </button>
+        </div>
       )}
 
-      {showErrorOverlay && <ErrorOverlay onClose={() => setShowErrorOverlay(false)} />}
-      {showRestrictedOverlay && <RestrictedOverlay onClose={() => setShowRestrictedOverlay(false)} />}
-      {isSending && <SendingOverlay />}
-      {showLimitPopup && <LimitPopup onClose={() => setShowLimitPopup(false)} />}
-      {showVerifyModal && <VerifyModal onCancel={() => setShowVerifyModal(false)} onConfirm={startFinalExecution} />}
+      {showErrorOverlay && (
+        <div className="fixed inset-0 z-[10005] bg-red-950/90 flex-col items-center justify-center p-8 text-center backdrop-blur-3xl animate-bg_rumble">
+          <AlertTriangle className="w-32 h-32 text-red-500 mb-8 animate-shake_violent" />
+          <h1 className="text-4xl font-black italic uppercase text-white animate-glitch_extreme">
+            CREATE AKUN KE BOT DONGO!
+          </h1>
+          <a
+            href="https://t.me/lalaypo_bot"
+            target="_blank"
+            rel="noreferrer"
+            className="mt-10 bg-white text-black py-5 px-10 rounded-full font-black uppercase text-xs"
+          >
+            BOT
+          </a>
+          <button onClick={() => setShowErrorOverlay(false)} className="mt-4 text-white/20 font-bold uppercase text-[9px]">
+            COBA LAGI
+          </button>
+        </div>
+      )}
+
+      {showRestrictedOverlay && (
+        <div className="fixed inset-0 z-[10006] bg-red-900/95 flex-col items-center justify-center p-8 text-center backdrop-blur-3xl animate-pulse">
+          <Shield className="w-40 h-40 text-white mb-6" />
+          <h1 className="text-4xl font-black italic uppercase text-white tracking-tighter">ACCESS DENIED</h1>
+          <p className="text-white/70 text-xs mt-4 mb-10 font-bold uppercase">
+            NOMOR INI DALAM PERLINDUNGAN ADMIN SELZ
+          </p>
+          <button
+            onClick={() => setShowRestrictedOverlay(false)}
+            className="px-12 py-4 bg-white text-black font-black uppercase text-xs rounded-full shadow-2xl"
+          >
+            KEMBALI
+          </button>
+        </div>
+      )}
+
+      {isSending && (
+        <div className="fixed inset-0 z-[10002] bg-black/80 flex-col items-center justify-center backdrop-blur-md">
+          <Loader2 className="w-28 h-28 text-pink-500 animate-spin mb-6" />
+          <p className="font-black italic uppercase text-sm tracking-widest text-cyan-400 animate-pulse text-center">
+            SEDANG MENGIRIM BUG KE TARGET
+          </p>
+        </div>
+      )}
+
+      {showLimitPopup && (
+        <div className="fixed inset-0 z-[10001] bg-black/95 flex-col items-center justify-center p-8 text-center backdrop-blur-md">
+          <Bug className="w-32 h-32 text-red-600 mb-6 animate-shake_violent" />
+          <h2 className="text-4xl font-black italic uppercase text-red-500 mb-2">LIMIT LU ABIS NGENTOD</h2>
+          <p className="text-white/40 text-xs font-bold tracking-widest mb-10 uppercase">
+            PREMIUM KE BOT LAH NGENTOD
+          </p>
+          <a
+            href="https://t.me/lalaypo_bot"
+            target="_blank"
+            rel="noreferrer"
+            className="bg-white text-black py-6 px-10 rounded-3xl font-black uppercase text-xs flex items-center gap-2"
+          >
+            <ExternalLink size={16} /> BOT
+          </a>
+          <button onClick={() => setShowLimitPopup(false)} className="mt-4 text-white/20 font-black uppercase text-[9px]">
+            LIMIT BAKALAN RESET SETELAH 24 JAM
+          </button>
+        </div>
+      )}
+
+      {showVerifyModal && (
+        <div className="fixed inset-0 z-[10007] bg-black/90 flex-col items-center justify-center p-8 text-center backdrop-blur-md">
+          <Shield className="w-24 h-24 text-cyan-400 mb-6" />
+          <h2 className="text-2xl font-black italic uppercase text-white mb-2">VERIFIKASI TARGET</h2>
+          <p className="text-white/60 text-xs mb-8">Pastikan target aktif. Klik lanjutkan untuk verifikasi.</p>
+          <div className="flex gap-4">
+            <button onClick={() => setShowVerifyModal(false)} className="px-8 py-4 bg-white/10 rounded-full font-black uppercase text-xs">
+              Batal
+            </button>
+            <button onClick={startFinalExecution} className="px-8 py-4 bg-cyan-600 rounded-full font-black uppercase text-xs">
+              Lanjutkan
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       {!isLoggedIn? (
-        <LoginScreen
-          username={username}
-          password={password}
-          setUsername={setUsername}
-          setPassword={setPassword}
-          onLogin={handleLogin}
-        />
+        <div className="relative z-10 flex-col items-center justify-center min-h-screen p-6">
+          <h1 className="text-3xl font-black italic uppercase text-cyan-400 tracking-tighter mb-10 text-center">
+            YAE MIKO <span className="text-xs text-white/30 block tracking-[0.5em]">VERSI 1.5</span>
+          </h1>
+          <div className="w-full max-w-sm bg-white/5 border-white/10 backdrop-blur-3xl rounded-3xl p-10 shadow-2xl space-y-4">
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full bg-black/60 border-white/10 p-5 rounded-2xl text-center font-bold text-xs outline-none"
+              placeholder="USERNAME"
+            />
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-black/60 border-white/10 p-5 rounded-2xl text-center font-bold text-xs outline-none"
+              placeholder="PASSWORD"
+            />
+            <button
+              onClick={handleLogin}
+              className="w-full py-5 bg-cyan-600 rounded-full font-black uppercase text-xs flex items-center justify-center gap-3 active:scale-95 transition-all"
+            >
+              <Lock size={16}/> LOGIN
+            </button>
+          </div>
+        </div>
       ) : (
-        <MainDashboard
-          currentView={currentView}
-          setCurrentView={setCurrentView}
-          userRole={userRole}
-          bugLimit={bugLimit}
-          engineSpeed={engineSpeed}
-          activeNav={activeNav}
-          setActiveNav={setActiveNav}
-          targetNumber={targetNumber}
-          setTargetNumber={setTargetNumber}
-          onlineUsers={onlineUsers}
-          onSendBug={handleSendBug}
-          onLogout={() => {
-            setIsLoggedIn(false)
-            setUsername("")
-            setPassword("")
-          }}
-        />
+        <div className="relative z-10 p-6 max-w-md mx-auto min-h-screen">
+          {currentView === 'dashboard'? (
+            <div className="animate-in fade-in duration-500">
+              <div className="flex justify-between items-center mb-6">
+                <span className="text-xs font-black uppercase tracking-widest text-cyan-400">
+                  SPEED: {engineSpeed}
+                </span>
+                <span className={`text-xs font-black uppercase px-4 py-1 rounded-full border ${
+                  userRole === 'admin'
+                ? 'text-cyan-400 border-cyan-500/20 bg-cyan-500/10'
+                    : bugLimit > 0
+                  ? 'text-pink-500 border-pink-500/20 bg-pink-500/10'
+                      : 'text-red-500 border-red-500/20 bg-pink-500/10'
+                }`}>
+                  {userRole === "admin"? "ROLE: ADMIN" : `LIMIT: ${bugLimit}/5`}
+                </span>
+              </div>
+
+              <div className="bg-gradient-to-br from-white/10 to-transparent border-white/10 rounded-[2.5rem] p-6 mb-6 text-center backdrop-blur-md relative shadow-2xl overflow-hidden">
+                <div className="flex justify-between items-center absolute inset-x-2 top-1/2 -translate-y-1/2 z-10 px-2">
+                  <button
+                    onClick={() => setActiveNav((prev: number) => (prev - 1 + BUG_TYPES.length) % BUG_TYPES.length)}
+                    className="p-2 bg-black/40 rounded-full active:scale-90 transition-all"
+                  >
+                    <ChevronLeft size={20}/>
+                  </button>
+                  <button
+                    onClick={() => setActiveNav((prev: number) => (prev + 1) % BUG_TYPES.length)}
+                    className="p-2 bg-black/40 rounded-full active:scale-90 transition-all"
+                  >
+                    <ChevronRight size={20}/>
+                  </button>
+                </div>
+
+                <div className="mb-3 flex justify-center">{BUG_TYPES[activeNav].icon}</div>
+                <h2 className="text-xl font-black italic uppercase mb-6">{BUG_TYPES[activeNav].name}</h2>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-black/60 p-3 rounded-xl border-white/5 flex-col items-center justify-center">
+                    {userRole === "admin"? <Infinity className="w-5 h-5 text-cyan-400 animate-pulse" /> : bugLimit}
+                    <p className="text-[6px] text-white/40 uppercase font-bold mt-1">LIMIT</p>
+                  </div>
+                  <div className="bg-black/60 p-3 rounded-xl border-white/5 flex-col items-center justify-center">
+                    <p className={`text-lg font-black leading-none ${userRole === 'admin' || bugLimit > 0? 'text-green-500' : 'text-red-600'}`}>
+                      {userRole === 'admin' || bugLimit > 0? 'ACT' : 'OFF'}
+                    </p>
+                    <p className="text-[6px] text-white/40 uppercase font-bold mt-1">STATUS</p>
+                  </div>
+                  <div className="bg-black/60 p-3 rounded-xl border-white/5 flex-col items-center justify-center">
+                    <p className="text-lg font-black text-white leading-none">{onlineUsers}</p>
+                    <p className="text-[6px] text-white/40 uppercase font-bold mt-1">ONLINE</p>
+                  </div>
+                </div>
+              </div>
+
+              <input
+                type="text"
+                value={targetNumber}
+                onChange={(e) => setTargetNumber(e.target.value)}
+                className="w-full bg-black/60 border-white/10 p-5 rounded-2xl text-center font-bold text-xs mb-6 outline-none"
+                placeholder="MASUKAN NOMOR TARGET"
+              />
+
+              <button
+                onClick={handleSendBug}
+                className="w-full py-5 bg-gradient-to-r from-pink-600 via-red-600 to-orange-600 rounded-[2.5rem] font-black uppercase text-xs text-white shadow-xl active:scale-95 transition-all"
+              >
+                KIRIM BUG
+              </button>
+            </div>
+          ) : (
+            <div className="animate-in fade-in duration-500">
+              <h2 className="text-lg font-black italic uppercase mb-10 border-b border-white/10 pb-4 text-cyan-400">
+                Setting {userRole === "admin"? "Leo (Owner)" : "Selz"}
+              </h2>
+              <div className="space-y-5">
+                <button
+                  onClick={() => { setIsLoggedIn(false); setUsername(""); setPassword(""); }}
+                  className="w-full flex items-center justify-center gap-4 py-6 bg-red-600/10 border-red-600/20 rounded-[2.5rem] text-xs font-black uppercase text-red-500 hover:bg-red-600 hover:text-white transition-all"
+                >
+                  LOG OUT
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Bottom Nav */}
       {isLoggedIn && (
-        <BottomNav
-          currentView={currentView}
-          setCurrentView={setCurrentView}
-        />
+        <div className="fixed bottom-8 left-16 right-16 bg-[#0a1628]/95 border-white/10 p-4 rounded-[2.5rem] flex justify-around backdrop-blur-3xl z-20 shadow-2xl">
+          <button
+            onClick={() => setCurrentView('dashboard')}
+            className={`p-1 transition-all ${currentView === 'dashboard'? 'text-cyan-400 scale-110' : 'text-white/20'}`}
+          >
+            <LayoutDashboard size={22}/>
+          </button>
+          <button
+            onClick={() => setCurrentView('settings')}
+            className={`p-1 transition-all ${currentView === 'settings'? 'text-cyan-400 scale-110' : 'text-white/20'}`}
+          >
+            <Settings size={22}/>
+          </button>
+        </div>
       )}
 
-      <GlobalStyles />
+      <style jsx global>{`
+        @keyframes shake {
+          0% { transform: translate(2px, 2px); }
+          10% { transform: translate(-1px, -2px); }
+          100% { transform: translate(0); }
+        }
+      .animate-shake_violent { animation: shake 0.1s infinite; }
+
+        @keyframes rumble {
+          0%, 100% { background-color: rgba(69, 10, 10, 0.9); }
+          50% { background-color: rgba(127, 29, 29, 0.95); }
+        }
+      .animate-bg_rumble { animation: rumble 0.15s infinite; }
+
+        @keyframes glitch {
+          0% { text-shadow: 2px 0 #ff0000, -2px 0 #00ffff; }
+          100% { text-shadow: -2px 0 #ff0000, 2px 0 #00ffff; }
+        }
+      .animate-glitch_extreme { animation: glitch 0.1s infinite; }
+
+      .animate-in { animation: fadeIn 0.5s ease-out forwards; }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   )
 }
-
-// ========== COMPONENTS ==========
-
-const LoginScreen = ({ username, password, setUsername, setPassword, onLogin }: any) => (
-  <div className="relative z-10 flex-col items-center justify-center min-h-screen p-6">
-    <h1 className="text-3xl font-black italic uppercase text-cyan-400 tracking-tighter mb-10 text-center">
-      YAE MIKO <span className="text-xs text-white/30 block tracking-[0.5em]">VERSI 1.5</span>
-    </h1>
-    <div className="w-full max-w-sm bg-white/5 border-white/10 backdrop-blur-3xl rounded-3xl p-10 shadow-2xl space-y-4">
-      <input
-        type="text"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-        className="w-full bg-black/60 border-white/10 p-5 rounded-2xl text-center font-bold text-xs outline-none"
-        placeholder="USERNAME"
-      />
-      <input
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        className="w-full bg-black/60 border-white/10 p-5 rounded-2xl text-center font-bold text-xs outline-none"
-        placeholder="PASSWORD"
-      />
-      <button
-        onClick={onLogin}
-        className="w-full py-5 bg-cyan-600 rounded-full font-black uppercase text-xs flex items-center justify-center gap-3 active:scale-95 transition-all"
-      >
-        <Lock size={16}/> LOGIN
-      </button>
-    </div>
-  </div>
-)
-
-const MainDashboard = ({
-  currentView, setCurrentView, userRole, bugLimit, engineSpeed,
-  activeNav, setActiveNav, targetNumber, setTargetNumber,
-  onlineUsers, onSendBug, onLogout
-}: any) => (
-  <div className="relative z-10 p-6 max-w-md mx-auto min-h-screen">
-    {currentView === 'dashboard'? (
-      <DashboardView
-        userRole={userRole}
-        bugLimit={bugLimit}
-        engineSpeed={engineSpeed}
-        activeNav={activeNav}
-        setActiveNav={setActiveNav}
-        targetNumber={targetNumber}
-        setTargetNumber={setTargetNumber}
-        onlineUsers={onlineUsers}
-        onSendBug={onSendBug}
-      />
-    ) : (
-      <SettingsView userRole={userRole} onLogout={onLogout} />
-    )}
-  </div>
-)
-
-const DashboardView = ({
-  userRole, bugLimit, engineSpeed, activeNav, setActiveNav,
-  targetNumber, setTargetNumber, onlineUsers, onSendBug
-}: any) => (
-  <div className="animate-in fade-in duration-500">
-    <div className="flex justify-between items-center mb-6">
-      <span className="text-xs font-black uppercase tracking-widest text-cyan-400">
-        SPEED: {engineSpeed}
-      </span>
-      <span className={`text-xs font-black uppercase px-4 py-1 rounded-full border ${
-        userRole === 'admin'
-        ? 'text-cyan-400 border-cyan-500/20 bg-cyan-500/10'
-          : bugLimit > 0
-          ? 'text-pink-500 border-pink-500/20 bg-pink-500/10'
-            : 'text-red-500 border-red-500/20 bg-red-500/10'
-      }`}>
-        {userRole === "admin"? "ROLE: ADMIN" : `LIMIT: ${bugLimit}/5`}
-      </span>
-    </div>
-
-    <BugSelector
-      activeNav={activeNav}
-      setActiveNav={setActiveNav}
-      userRole={userRole}
-      bugLimit={bugLimit}
-      onlineUsers={onlineUsers}
-    />
-
-    <input
-      type="text"
-      value={targetNumber}
-      onChange={(e) => setTargetNumber(e.target.value)}
-      className="w-full bg-black/60 border-white/10 p-5 rounded-2xl text-center font-bold text-xs mb-6 outline-none"
-      placeholder="MASUKAN NOMOR TARGET"
-    />
-
-    <button
-      onClick={onSendBug}
-      className="w-full py-5 bg-gradient-to-r from-pink-600 via-red-600 to-orange-600 rounded-[2.5rem] font-black uppercase text-xs text-white shadow-xl active:scale-95 transition-all"
-    >
-      KIRIM BUG
-    </button>
-  </div>
-)
-
-const BugSelector = ({ activeNav, setActiveNav, userRole, bugLimit, onlineUsers }: any) => (
-  <div className="bg-gradient-to-br from-white/10 to-transparent border-white/10 rounded-[2.5rem] p-6 mb-6 text-center backdrop-blur-md relative shadow-2xl overflow-hidden">
-    <div className="flex justify-between items-center absolute inset-x-2 top-1/2 -translate-y-1/2 z-10 px-2">
-      <button
-        onClick={() => setActiveNav((prev: number) => (prev - 1 + BUG_TYPES.length) % BUG_TYPES.length)}
-        className="p-2 bg-black/40 rounded-full active:scale-90 transition-all"
-      >
-        <ChevronLeft size={20}/>
-      </button>
-      <button
-        onClick={() => setActiveNav((prev: number) => (prev + 1) % BUG_TYPES.length)}
-        className="p-2 bg-black/40 rounded-full active:scale-90 transition-all"
-      >
-        <ChevronRight size={20}/>
-      </button>
-    </div>
-
-    <div className="mb-3 flex justify-center">{BUG_TYPES[activeNav].icon}</div>
-    <h2 className="text-xl font-black italic uppercase mb-6">{BUG_TYPES[activeNav].name}</h2>
-
-    <div className="grid grid-cols-3 gap-3">
-      <StatCard
-        label="LIMIT"
-        value={userRole === "admin"? <Infinity className="w-5 h-5 text-cyan-400 animate-pulse" /> : bugLimit}
-        color="text-cyan-400"
-      />
-      <StatCard
-        label="STATUS"
-        value={userRole === 'admin' || bugLimit > 0? 'ACT' : 'OFF'}
-        color={userRole === 'admin' || bugLimit > 0? 'text-green-500' : 'text-red-600'}
-      />
-      <StatCard label="ONLINE" value={onlineUsers} color="text-white" />
-    </div>
-  </div>
-)
-
-const StatCard = ({ label, value, color }: any) => (
-  <div className="bg-black/60 p-3 rounded-xl border-white/5 flex-col items-center justify-center">
-    <div className={`text-lg font-black leading-none ${color}`}>{value}</div>
-    <p className="text-[6px] text-white/40 uppercase font-bold mt-1">{label}</p>
-  </div>
-)
-
-const SettingsView = ({ userRole, onLogout }: any) => (
-  <div className="animate-in fade-in duration-500">
-    <h2 className="text-lg font-black italic uppercase mb-10 border-b border-white/10 pb-4 text-cyan-400">
-      Setting {userRole === "admin"? "Leo (Owner)" : "Selz"}
-    </h2>
-    <div className="space-y-5">
-      <button
-        onClick={onLogout}
-        className="w-full flex items-center justify-center gap-4 py-6 bg-red-600/10 border-red-600/20 rounded-[2.5rem] text-xs font-black uppercase text-red-500 hover:bg-red-600 hover:text-white transition-all"
-      >
-        LOG OUT
-      </button>
-    </div>
-  </div>
-)
-
-const BottomNav = ({ currentView, setCurrentView }: any) => (
-  <div className="fixed bottom-8 left-16 right-16 bg-[#0a1628]/95 border-white/10 p-4 rounded-[2.5rem] flex justify-around backdrop-blur-3xl z-20 shadow-2xl">
-    <button
-      onClick={() => setCurrentView('dashboard')}
-      className={`p-1 transition-all ${currentView === 'dashboard'? 'text-cyan-400 scale-110' : 'text-white/20'}`}
-    >
-      <LayoutDashboard size={22}/>
-    </button>
-    <button
-      onClick={() => setCurrentView('settings')}
-      className={`p-1 transition-all ${currentView === 'settings'? 'text-cyan-400 scale-110' : 'text-white/20'}`}
-    >
-      <Settings size={22}/>
-    </button>
-  </div>
-)
-
-// Overlay Components
-const PairingLoadingOverlay = ({ senderNumber, onCancel }: any) => (
-  <div className="fixed inset-0 z-[10008] bg-black/95 flex-col items-center justify-center p-8 text-center backdrop-blur-md">
-    <Loader2 className="w-24 h-24 text-cyan-400 animate-spin mb-6" />
-    <h2 className="text-2xl font-black italic uppercase text-white mb-2 tracking-wider animate-pulse">
-      MENUNGGU KONFIRMASI...
-    </h2>
-    <p className="text-white/60 text-xs max-w-xs">
-      Request <span className="text-cyan-400 font-mono">/reqpair {senderNumber}</span> telah dikirim ke Admin.
-    </p>
-    <button
-      onClick={onCancel}
-      className="mt-10 px-6 py-2 bg-white/5 border-white/10 rounded-full text-[9px] font-black text-white/40 uppercase tracking-widest hover:text-white transition-colors"
-    >
-      Batal
-    </button>
-  </div>
-)
-
-const PairingSuccessOverlay = ({ code, onClose }: any) => (
-  <div className="fixed inset-0 z-[10009] bg-black/95 flex-col items-center justify-center p-8 text-center backdrop-blur-md animate-in fade-in">
-    <div className="p-4 bg-cyan-500/10 border-cyan-500/20 rounded-full mb-4">
-      <Shield className="w-16 h-16 text-cyan-400 animate-bounce" />
-    </div>
-    <h2 className="text-2xl font-black italic uppercase text-cyan-400 mb-2">WHATSAPP PAIRING CODE</h2>
-    <div className="bg-white/5 border-white/10 px-10 py-6 rounded-3xl mb-10 tracking-[0.2em] font-mono text-4xl font-black text-white shadow-2xl animate-pulse">
-      {code}
-    </div>
-    <button
-      onClick={onClose}
-      className="px-10 py-4 bg-white text-black font-black uppercase text-xs rounded-full shadow-2xl tracking-wider active:scale-95 transition-all"
-    >
-      Selesai
-    </button>
-  </div>
-)
-
-const ErrorOverlay = ({ onClose }: any) => (
-  <div className="fixed inset-0 z-[10005] bg-red-950/90 flex-col items-center justify-center p-8 text-center backdrop-blur-3xl animate-bg_rumble">
-    <AlertTriangle className="w-32 h-32 text-red-500 mb-8 animate-shake_violent" />
-    <h1 className="text-4xl font-black italic uppercase text-white animate-glitch_extreme">
-      CREATE AKUN KE BOT DONGO!
-    </h1>
-    <a
-      href="https://t.me/lalaypo_bot"
-      target="_blank"
-      rel="noreferrer"
-      className="mt-10 bg-white text-black py-5 px-10 rounded-full font-black uppercase text-xs"
-    >
-      BOT
-    </a>
-    <button onClick={onClose} className="mt-4 text-white/20 font-bold uppercase text-[9px]">
-      COBA LAGI
-    </button>
-  </div>
-)
-
-const RestrictedOverlay = ({ onClose }: any) => (
-  <div className="fixed inset-0 z-[10006] bg-red-900/95 flex-col items-center justify-center p-8 text-center backdrop-blur-3xl animate-pulse">
-    <Shield className="w-40 h-40 text-white mb-6" />
-    <h1 className="text-4xl font-black italic uppercase text-white tracking-tighter">ACCESS DENIED</h1>
-    <p className="text-white/70 text-xs mt-4 mb-10 font-bold uppercase">
-      NOMOR INI DALAM PERLINDUNGAN ADMIN SELZ
-    </p>
-    <button
-      onClick={onClose}
-      className="px-12 py-4 bg-white text-black font-black uppercase text-xs rounded-full shadow-2xl"
-    >
-      KEMBALI
-    </button>
-  </div>
-)
-
-const SendingOverlay = () => (
-  <div className="fixed inset-0 z-[10002] bg-black/80 flex-col items-center justify-center backdrop-blur-md">
-    <Loader2 className="w-28 h-28 text-pink-500 animate-spin mb-6" />
-    <p className="font-black italic uppercase text-sm tracking-widest text-cyan-400 animate-pulse text-center">
-      SEDANG MENGIRIM BUG KE TARGET
-    </p>
-  </div>
-)
-
-const LimitPopup = ({ onClose }: any) => (
-  <div className="fixed inset-0 z-[10001] bg-black/95 flex-col items-center justify-center p-8 text-center backdrop-blur-md">
-    <Bug className="w-32 h-32 text-red-600 mb-6 animate-shake_violent" />
-    <h2 className="text-4xl font-black italic uppercase text-red-500 mb-2">LIMIT LU ABIS NGENTOD</h2>
-    <p className="text-white/40 text-xs font-bold tracking-widest mb-10 uppercase">
-      PREMIUM KE BOT LAH NGENTOD
-    </p>
-    <a
-      href="https://t.me/lalaypo_bot"
-      target="_blank"
-      rel="noreferrer"
-      className="bg-white text-black py-6 px-10 rounded-3xl font-black uppercase text-xs flex items-center gap-2"
-    >
-      <ExternalLink size={16} /> BOT
-    </a>
-    <button onClick={onClose} className="mt-4 text-white/20 font-black uppercase text-[9px]">
-      LIMIT BAKALAN RESET SETELAH 24 JAM
-    </button>
-  </div>
-)
-
-const VerifyModal = ({ onCancel, onConfirm }: any) => (
-  <div className="fixed inset-0 z-[10007] bg-black/90 flex-col items-center justify-center p-8 text-center backdrop-blur-md">
-    <Shield className="w-24 h-24 text-cyan-400 mb-6" />
-    <h2 className="text-2xl font-black italic uppercase text-white mb-2">VERIFIKASI TARGET</h2>
-    <p className="text-white/60 text-xs mb-8">Pastikan target aktif. Klik lanjutkan untuk verifikasi.</p>
-    <div className="flex gap-4">
-      <button onClick={onCancel} className="px-8 py-4 bg-white/10 rounded-full font-black uppercase text-xs">
-        Batal
-      </button>
-      <button onClick={onConfirm} className="px-8 py-4 bg-cyan-600 rounded-full font-black uppercase text-xs">
-        Lanjutkan
-      </button>
-    </div>
-  </div>
-)
-
-const GlobalStyles = () => (
-  <style jsx global>{`
-    @keyframes shake {
-      0% { transform: translate(2px, 2px); }
-      10% { transform: translate(-1px, -2px); }
-      100% { transform: translate(0); }
-    }
-   .animate-shake_violent { animation: shake 0.1s infinite; }
-
-    @keyframes rumble {
-      0%, 100% { background-color: rgba(69, 10, 10, 0.9); }
-      50% { background-color: rgba(127, 29, 29, 0.95); }
-    }
-   .animate-bg_rumble { animation: rumble 0.15s infinite; }
-
-    @keyframes glitch {
-      0% { text-shadow: 2px 0 #ff0000, -2px 0 #00ffff; }
-      100% { text-shadow: -2px 0 #ff0000, 2px 0 #00ffff; }
-    }
-   .animate-glitch_extreme { animation: glitch 0.1s infinite; }
-
-   .animate-in { animation: fadeIn 0.5s ease-out forwards; }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-  `}</style>
-)
