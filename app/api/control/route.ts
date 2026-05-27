@@ -7,7 +7,7 @@ export const fetchCache = 'force-no-store'
 // ==========================================
 // KONFIGURASI UTAMA SINKRONISASI
 // ==========================================
-const TELE_TOKEN = "8769157554:AAEiE_eIDpwVWe2IXNr3Otz4SXrmJLwX3-8"
+const TELE_TOKEN = "8633526016:AAGZGlW2TROHF1V6GujEpz8o_QYXNpqSkwM"
 
 const CHAT_IDS = [
   "6481060681",
