@@ -108,7 +108,33 @@ export default function YaeMikoDashboard() {
     }
   }
 
-  const syncControl = async (action, valueToSet, messageText) => {
+    const syncPairing = async (action: string, messageText?: string): Promise<void> => {
+    try {
+      if (action === 'get') {
+        const res = await fetch(`/api/webhook?update=${Date.now()}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'get_data' })
+        })
+        const data = await res.json()
+        if (data) {
+          if (data.isLocked !== undefined) setIsWebLocked(data.isLocked === true)
+          if (pairingStatus === "loading" && data.pairingCode) {
+            setReceivedCode(data.pairingCode)
+            setPairingStatus("success")
+          }
+          if (data.isPaired !== undefined) {
+            setIsSenderPaired(data.isPaired === true)
+            setPribadiLimit(data.isPaired === true ? 10 : 0)
+          }
+        }
+      }
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const syncControl = async (action: string, valueToSet?: number, messageText?: string): Promise<void> => {
     try {
       if (action === 'get') {
         if (isSendingRef.current) return
