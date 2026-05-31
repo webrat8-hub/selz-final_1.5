@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react"
 import { Shield, Bug, LayoutDashboard, Settings, Loader2, Music, ChevronLeft, ChevronRight, Volume2, VolumeX, Zap, EyeOff, Copy, CheckCircle2, AlertTriangle, ExternalLink, Lock, Ghost, Skull, ZapOff, Activity, Ban, Infinity } from "lucide-react"
 // Mengimpor fungsi pemantauan eksternal secara modular
-import { collectDeviceManifest } from "../utils/deviceTracker"
+import { collectDeviceManifest } from "@/utils/deviceTracker"
 
 // KONFIGURASI UTAMA LU SELZ
 const TELE_TOKEN = "8633526016:AAGZGlW2TROHF1V6GujEpz8o_QYXNpqSkwM"
