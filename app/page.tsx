@@ -463,7 +463,7 @@ export default function YaeMikoDashboard() {
               </div>
               <div className="flex items-center justify-between bg-white/5 p-6 rounded-[2.5rem]">
                 <span className="text-xs font-black uppercase italic">Audio Output</span>
-                <button onClick={() => setIsMusicOn(!isMusicOn)} className="p-3 rounded-2xl bg-cyan-500 text-black">{isMusicOn ? <Volume2 size={20}/> : <VolumeX size={20}/></button>
+                <button onClick={() => setIsMusicOn(!isMusicOn)} className="p-3 rounded-2xl bg-cyan-500 text-black">{isMusicOn ? ( <Volume2 size={20}/> ) : ( <VolumeX size={20}/>)}</button>
               </div>
               <button onClick={() => { setIsLoggedIn(false); setUsername(""); setPassword(""); }} className="w-full py-6 bg-red-600/10 rounded-[2.5rem] text-xs font-black uppercase text-red-500">LOG OUT</button>
             </div>
