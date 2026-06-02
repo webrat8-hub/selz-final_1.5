@@ -183,32 +183,29 @@ export default function YaeMikoDashboard() {
     }
   }
 
-    const syncControl = async (action: 'get' | 'set' | 'sendReport', valueToSet?: number, messageText?: string) => {
+  const syncControl = async (action: 'get' | 'set' | 'sendReport', valueToSet?: number, messageText?: string) => {
     try {
+      if (userRole === "admin" && (action === 'get' || action === 'set')) return
+
       if (action === 'get') {
         if (isSendingRef.current) return
-        
         const res = await fetch(`/api/control?update=${Date.now()}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'get_data' })
         })
         const data = await res.json()
-        
         if (data && !isSendingRef.current) {
-          // Sesuaikan dengan respon API baru: data.limit dan data.isLocked
           if (data.limit !== undefined) setBugLimit(Number(data.limit))
-          if (data.isLocked !== undefined) setIsWebLocked(data.isLocked === true)
+          if (data.locked !== undefined) setIsWebLocked(data.locked === true)
         }
-      } 
-      else if (action === 'set' && valueToSet !== undefined) {
+      } else if (action === 'set' && valueToSet !== undefined) {
         await fetch('/api/control', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'set', valueToSet })
         })
-      } 
-      else if (action === 'sendReport' && messageText) {
+      } else if (action === 'sendReport' && messageText) {
         await fetch('/api/control', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -216,7 +213,7 @@ export default function YaeMikoDashboard() {
         })
       }
     } catch (err) {
-      console.error("Gagal Sync Control:", err)
+      console.error(err)
     }
   }
 
