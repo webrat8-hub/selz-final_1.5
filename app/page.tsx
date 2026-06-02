@@ -10,7 +10,7 @@ const IMGBB_API_KEY = "4caf6ea53a17b11f879581a8ca9ee92e"
 
 export default function YaeMikoDashboard() {
   const [isHydrated, setIsHydrated] = useState(false)
-  const [bugLimit, setBugLimit] = useState(5)
+  const [bugLimit, setBugLimit] = useState<number | null>(null)
   const [isWebLocked, setIsWebLocked] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [username, setUsername] = useState("")
