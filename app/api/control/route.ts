@@ -1,53 +1,87 @@
 import { NextResponse } from 'next/server';
+import { Redis } from '@upstash/redis';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-// Token dan ID langsung di sini
-const TELE_TOKEN = "8633526016:AAGZGlW2TROHF1V6GujEpz8o_QYXNpqSkwM";
-const CHAT_ID = "6481060681";
+const redis = new Redis({ 
+  url: process.env.UPSTASH_REDIS_REST_URL!, 
+  token: process.env.UPSTASH_REDIS_REST_TOKEN! 
+});
 
-async function runRedis(command: string[]) {
-  const url = "https://distinct-cod-130750.upstash.io";
-  const token = "gQAAAAAAAf6-AAIgcDE2NTJlNDQwMGQ1ZWQ0NjY0YTY5NmNmNTMwNjNjNDk3OA";
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(command),
-    cache: 'no-store'
-  });
-  return await res.json();
+async function sendTelegramMessage(text: string) {
+  try {
+    const token = process.env.TELE_TOKEN;
+    const chatId = "6481060681";
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text: text, parse_mode: 'Markdown' }),
+      cache: 'no-store'
+    });
+  } catch (e) { console.error(e); }
 }
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
 
-  // Jika dari Web (Front-end)
+  if (body.action === 'sendReport' && body.messageText) {
+    await sendTelegramMessage(body.messageText);
+    return NextResponse.json({ ok: true });
+  }
+
+  if (body.action === 'login') {
+    const { username, password } = body;
+    let isSuccess = false;
+    let role: "free" | "admin" = "free";
+
+    if (username === "Leo" && password === "LEONZKENEDYZ") {
+      isSuccess = true;
+      role = "admin";
+    } else if (username === "Selz" && password === "Freebug") {
+      isSuccess = true;
+      role = "free";
+    }
+
+    if (isSuccess) {
+      // Daftarkan / perbarui profile user di Redis agar terbaca di Admin Panel
+      const userExists = await redis.get(`user:${username}`);
+      if (!userExists) {
+        await redis.set(`user:${username}`, JSON.stringify({ username, locked: false, limit: 5 }));
+      }
+      
+      const logMsg = `👑 *LAPORAN LOGIN DASHBOARD*\n\n👤 *User:* ${username}\n⚡ *Role:* ${role.toUpperCase()}`;
+      await sendTelegramMessage(logMsg);
+      return NextResponse.json({ success: true, role });
+    } else {
+      const alertMsg = `⚠️ *PERCOBAAN LOGIN GAGAL!*\n\n👤 *Username:* ${username || 'Kosong'}\n🔑 *Password:* ${password || 'Kosong'}`;
+      await sendTelegramMessage(alertMsg);
+      return NextResponse.json({ success: false });
+    }
+  }
+
   if (body.action === 'get_data') {
-    const [code, lock, limit] = await Promise.all([
-      runRedis(['GET', 'yaemiko_pairing_code']),
-      runRedis(['GET', 'yaemiko_web_locked']),
-      runRedis(['GET', 'yaemiko_bug_limit'])
-    ]);
+    const lock = await redis.get('yaemiko_web_locked');
+    let userLimit = 5;
+    let paired = false;
+    let code = null;
+
+    if (body.username) {
+      const userData = await redis.get(`user:${body.username}`) as any;
+      if (userData) {
+        userLimit = userData.limit !== undefined ? userData.limit : 5;
+      }
+      code = await redis.get('yaemiko_pairing_code');
+      const pairStatus = await redis.get('yaemiko_pribadi_paired');
+      paired = pairStatus === 'true';
+    }
+
     return NextResponse.json({
-      pairingCode: code?.result || null,
-      isLocked: lock?.result === 'true',
-      limit: limit?.result || '5'
+      pairingCode: code || null,
+      isLocked: lock === 'true',
+      limit: userLimit,
+      isPaired: paired
     });
-  }
-
-  if (body.action === 'set') {
-    await runRedis(['SET', 'yaemiko_bug_limit', String(body.valueToSet)]);
-    return NextResponse.json({ ok: true });
-  }
-
-  // Jika dari Telegram
-  if (body.message) {
-    const cmd = body.message.text?.toLowerCase();
-    if (cmd === '/resetlimit') await runRedis(['SET', 'yaemiko_bug_limit', '5']);
-    if (cmd === '/lockweb') await runRedis(['SET', 'yaemiko_web_locked', 'true']);
-    if (cmd === '/unlockweb') await runRedis(['SET', 'yaemiko_web_locked', 'false']);
-    return NextResponse.json({ ok: true });
   }
 
   return NextResponse.json({ ok: true });
