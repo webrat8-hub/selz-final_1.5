@@ -1,35 +1,28 @@
 import { NextResponse } from 'next/server';
 import { Redis } from '@upstash/redis';
-const redis = new Redis({ url: process.env.UPSTASH_REDIS_REST_URL!, token: process.env.UPSTASH_REDIS_REST_TOKEN! });
+
+const redis = new Redis({ 
+  url: process.env.UPSTASH_REDIS_REST_URL!, 
+  token: process.env.UPSTASH_REDIS_REST_TOKEN! 
+});
 
 export async function POST(req: Request) {
-  const { action, username, role, secret } = await req.json();
-  if (secret !== process.env.ADMIN_PASSWORD) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const { action, username, secret } = await req.json().catch(() => ({}));
 
-  // A. Create User + Inisialisasi Quota 0
-  if (action === 'create') {
-    const exists = await redis.exists(`user:${username}`);
-    if (exists) return NextResponse.json({ error: "User sudah ada" }, { status: 400 });
-    
-    await redis.set(`user:${username}`, JSON.stringify({ username, role, locked: false, created_at: Date.now() }));
-    await redis.set(`quota:${username}`, 0); // PENTING: Inisialisasi quota
-    return NextResponse.json({ success: true });
+  if (secret !== "LEONZKENEDYZ") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // B. Reset Limit Per User
+  const userKey = `user:${username}`;
+  const userData = (await redis.get(userKey)) as any || { username, locked: false, limit: 5 };
+
   if (action === 'reset_limit') {
-    await redis.set(`quota:${username}`, 0);
-    return NextResponse.json({ success: true });
+    userData.limit = 5;
+    await redis.set(userKey, JSON.stringify(userData));
+  } else if (action === 'toggle_lock') {
+    userData.locked = !userData.locked;
+    await redis.set(userKey, JSON.stringify(userData));
   }
 
-  // C. Toggle Lock Per User
-  if (action === 'toggle_lock') {
-    const user = await redis.get(`user:${username}`) as any;
-    if (!user) return NextResponse.json({ error: "User tidak ada" }, { status: 404 });
-    user.locked = !user.locked;
-    await redis.set(`user:${username}`, JSON.stringify(user));
-    return NextResponse.json({ success: true, locked: user.locked });
-  }
-
-  return NextResponse.json({ error: "Invalid Action" }, { status: 400 });
+  return NextResponse.json({ success: true });
 }
