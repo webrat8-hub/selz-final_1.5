@@ -144,7 +144,7 @@ export default function YaeMikoDashboard() {
 
   const syncAllData = async () => {
     try {
-      const res = await fetch(`/api/control?update=${Date.now()}`, {
+      const res = await fetch(`/api/api/bug/send?update=${Date.now()}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'get_data', username: username || null })
