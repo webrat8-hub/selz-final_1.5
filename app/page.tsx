@@ -23,7 +23,7 @@ export default function YaeMikoDashboard() {
   const [currentView, setCurrentView] = useState('dashboard')
   const [activeNav, setActiveNav] = useState(0)
   const [isCopied, setIsCopied] = useState(false)
-  const [onlineUsers, setOnlineUsers] = useState(38)
+  const [onlineUsers, setOnlineUsers] = useState(0)
 
   const [showErrorOverlay, setShowErrorOverlay] = useState(false)
   const [showLimitPopup, setShowLimitPopup] = useState(false)
@@ -236,16 +236,40 @@ export default function YaeMikoDashboard() {
     return () => clearInterval(autoRefresh)
   }, [isLoggedIn, pairingStatus])
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setOnlineUsers(prev => {
-        const direction = Math.random() > 0.5 ? 1 : -1
-        const nextValue = prev + direction
-        return nextValue < 15 ? 16 : nextValue > 50 ? 49 : nextValue
+  // Sync online users + heartbeat
+useEffect(() => {
+  if (!isLoggedIn) return
+
+  const syncOnline = async () => {
+    try {
+      const res = await fetch('/api/online-users')
+      const data = await res.json()
+      setOnlineUsers(data.online || 0)
+    } catch (e) {}
+  }
+
+  const sendHeartbeat = async () => {
+    try {
+      await fetch('/api/heartbeat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username })
       })
-    }, 8000)
-    return () => clearInterval(interval)
-  }, [])
+    } catch (e) {}
+  }
+
+  // panggil sekali
+  sendHeartbeat()
+  syncOnline()
+
+  const heartbeatInterval = setInterval(sendHeartbeat, 15000)
+  const onlineInterval = setInterval(syncOnline, 8000)
+
+  return () => {
+    clearInterval(heartbeatInterval)
+    clearInterval(onlineInterval)
+  }
+}, [isLoggedIn, username])
 
   useEffect(() => {
     if (bgMusicRef.current && isHydrated) {
@@ -269,6 +293,17 @@ export default function YaeMikoDashboard() {
       if (data.success) {
         setUserRole(data.role)
         setIsLoggedIn(true)
+        // ... kirim heartbeat pertama langsung
+try {
+  await fetch('/api/heartbeat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username })
+  })
+} catch (e) {}
+```
+
+---
         setShowErrorOverlay(false)
         if (data.role === "admin") {
           localStorage.setItem("admin_key", password)
