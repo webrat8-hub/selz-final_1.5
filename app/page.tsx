@@ -301,9 +301,7 @@ try {
     body: JSON.stringify({ username })
   })
 } catch (e) {}
-```
 
----
         setShowErrorOverlay(false)
         if (data.role === "admin") {
           localStorage.setItem("admin_key", password)
