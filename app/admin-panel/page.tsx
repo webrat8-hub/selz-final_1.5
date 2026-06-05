@@ -255,10 +255,12 @@ export default function AdminPanel() {
             onChange={(e) => setNewRole(e.target.value)}
             className="bg-black border border-green-800 p-3 rounded text-sm text-green-500 outline-none focus:border-green-400"
           >
-            <option value="user">👤 USER</option>
-            <option value="admin">🛡 ADMIN</option>
+            <option value="trial">🆓 TRIAL</option>
+            <option value="member">✶ MEMBER</option>
+            <option value="fullup">◈ FULLUP</option>
             <option value="reseller">💎 RESELLER</option>
-            <option value="premium">⭐ PREMIUM</option>
+            <option value="partner">𖤓 PARTNER</option>
+            <option value="apex-partner">✦ PARTNER</option>
           </select>
           <button 
             onClick={handleCreateUser}
