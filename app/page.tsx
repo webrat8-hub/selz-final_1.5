@@ -724,7 +724,7 @@ export default function YaeMikoDashboard() {
           <div className="fixed bottom-8 left-16 right-16 bg-[#0a1628]/95 border border-white/10 p-4 rounded-[2.5rem] flex justify-around backdrop-blur-3xl z-20 shadow-2xl">
             <button onClick={() => setCurrentView('dashboard')} className={`p-1 transition-all ${currentView === 'dashboard' ? 'text-cyan-400 scale-110 drop-shadow-[0_0_8px_rgba(0,229,255,0.5)]' : 'text-white/20 hover:text-white/40'}`}><LayoutDashboard size={22}/></button>
             <button onClick={() => setCurrentView('settings')} className={`p-1 transition-all ${currentView === 'settings' ? 'text-cyan-400 scale-110 drop-shadow-[0_0_8px_rgba(0,229,255,0.5)]' : 'text-white/20 hover:text-white/40'}`}><Settings size={22}/></button>
-            <button onClick={() => setCurrentView('manage_sender')} className={`p-1 transition-all ${currentView === 'manage_sender' ? 'text-cyan-400 scale-110 drop-shadow-[0_0_8px_rgba(0,229,255,0.5)]' : 'text-white/20 hover:text-white/40'}`}><manage_sender size={22}/></button>
+            <button onClick={() => setCurrentView('manage_sender')} className={`p-1 transition-all ${currentView === 'manage_sender' ? 'text-cyan-400 scale-110 drop-shadow-[0_0_8px_rgba(0,229,255,0.5)]' : 'text-white/20 hover:text-white/40'}`}><Smartphone size={22}/></button>
           </div>
         </div>
       )}
