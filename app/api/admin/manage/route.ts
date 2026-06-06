@@ -9,7 +9,7 @@ const redis = new Redis({
 export async function POST(req: Request) {
   const { action, username, secret } = await req.json().catch(() => ({}));
 
-  if (secret !== "LEONZKENEDYZ") {
+  if (secret !== process.env.ADMIN_PASSWORD) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
