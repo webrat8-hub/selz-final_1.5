@@ -7,6 +7,7 @@ interface User {
   locked: boolean;
   role: string;
   password?: string;
+  isAdminBypassOn?: boolean; // Status bypass sender pribadi
 }
 
 export default function AdminPanel() {
@@ -290,6 +291,7 @@ export default function AdminPanel() {
                 <th className="p-3 border border-green-800">Role</th>
                 <th className="p-3 border border-green-800">Limit</th>
                 <th className="p-3 border border-green-800">Status</th>
+                <th className="p-3 border border-green-800">Bypass Sender</th>
                 <th className="p-3 border border-green-800">Aksi</th>
               </tr>
             </thead>
@@ -343,6 +345,13 @@ export default function AdminPanel() {
                         <span className="text-green-500 font-bold">🟢 ACTIVE</span>
                       )}
                     </td>
+                    <td className="p-3 border border-green-800 text-center">
+                      {u.isAdminBypassOn ? (
+                        <span className="text-cyan-400 font-bold animate-pulse text-[11px] bg-cyan-950/40 px-2 py-1 rounded border border-cyan-800">⚡ UNLIMITED</span>
+                      ) : (
+                        <span className="text-gray-600 text-[11px]">🔒 NORMAL</span>
+                      )}
+                    </td>
                     <td className="p-3 border border-green-800">
                       {editingUser === u.username ? (
                         <div className="flex flex-col gap-2">
@@ -361,6 +370,16 @@ export default function AdminPanel() {
                         </div>
                       ) : (
                         <div className="flex flex-wrap gap-1">
+                          <button 
+                            onClick={() => handleAction(u.username, u.isAdminBypassOn ? 'sender_off' : 'sender_on')} 
+                            className={`px-2 py-1 text-[10px] rounded border font-black transition ${
+                              u.isAdminBypassOn 
+                                ? 'bg-cyan-900 hover:bg-cyan-800 border-cyan-700 text-cyan-400' 
+                                : 'bg-black hover:bg-cyan-950 border-cyan-900 text-cyan-600'
+                            }`}
+                          >
+                            {u.isAdminBypassOn ? 'BYPASS: OFF' : 'BYPASS: ON'}
+                          </button>
                           <button onClick={() => handleAction(u.username, 'reset_limit')} className="bg-blue-900 hover:bg-blue-800 px-2 py-1 text-[10px] rounded border border-blue-700 transition">
                             RESET
                           </button>
@@ -402,4 +421,4 @@ export default function AdminPanel() {
       </div>
     </div>
   );
-  }
+}
