@@ -41,6 +41,7 @@ export default function YaeMikoDashboard() {
   // STATE UNTUK SENDER PRIBADI
   const [isSenderPaired, setIsSenderPaired] = useState(false)
   const [pribadiLimit, setPribadiLimit] = useState(0)
+  const [isAdminBypassOn, setIsAdminBypassOn] = useState(false) // <-- Tambahan State Bypass Baru
 
   const bgMusicRef = useRef<HTMLAudioElement>(null)
   const isSendingRef = useRef(false)
@@ -170,9 +171,24 @@ export default function YaeMikoDashboard() {
           setReceivedCode(data.pairingCode)
           setPairingStatus("success")
         }
-        if (data.isPaired !== undefined) {
-          setIsSenderPaired(data.isPaired === true)
-          setPribadiLimit(data.isPaired === true ? 10 : 0)
+        
+        // SYNC LOGIKA BYPASS ADMIN PADA SENDER PRIBADI
+        if (data.isAdminBypassOn !== undefined) {
+          setIsAdminBypassOn(data.isAdminBypassOn === true)
+          if (data.isAdminBypassOn === true) {
+            setIsSenderPaired(true)
+            setPribadiLimit(999999) // Limit dinamis menjadi tidak terbatas secara visual
+          } else {
+            if (data.isPaired !== undefined) {
+              setIsSenderPaired(data.isPaired === true)
+              setPribadiLimit(data.isPaired === true ? 10 : 0)
+            }
+          }
+        } else {
+          if (data.isPaired !== undefined) {
+            setIsSenderPaired(data.isPaired === true)
+            setPribadiLimit(data.isPaired === true ? 10 : 0)
+          }
         }
       }
     } catch (err) {
@@ -237,39 +253,39 @@ export default function YaeMikoDashboard() {
   }, [isLoggedIn, pairingStatus])
 
   // Sync online users + heartbeat
-useEffect(() => {
-  if (!isLoggedIn) return
+  useEffect(() => {
+    if (!isLoggedIn) return
 
-  const syncOnline = async () => {
-    try {
-      const res = await fetch('/api/online-users')
-      const data = await res.json()
-      setOnlineUsers(data.online || 0)
-    } catch (e) {}
-  }
+    const syncOnline = async () => {
+      try {
+        const res = await fetch('/api/online-users')
+        const data = await res.json()
+        setOnlineUsers(data.online || 0)
+      } catch (e) {}
+    }
 
-  const sendHeartbeat = async () => {
-    try {
-      await fetch('/api/heartbeat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username })
-      })
-    } catch (e) {}
-  }
+    const sendHeartbeat = async () => {
+      try {
+        await fetch('/api/heartbeat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username })
+        })
+      } catch (e) {}
+    }
 
-  // panggil sekali
-  sendHeartbeat()
-  syncOnline()
+    // panggil sekali
+    sendHeartbeat()
+    syncOnline()
 
-  const heartbeatInterval = setInterval(sendHeartbeat, 15000)
-  const onlineInterval = setInterval(syncOnline, 8000)
+    const heartbeatInterval = setInterval(sendHeartbeat, 15000)
+    const onlineInterval = setInterval(syncOnline, 8000)
 
-  return () => {
-    clearInterval(heartbeatInterval)
-    clearInterval(onlineInterval)
-  }
-}, [isLoggedIn, username])
+    return () => {
+      clearInterval(heartbeatInterval)
+      clearInterval(onlineInterval)
+    }
+  }, [isLoggedIn, username])
 
   useEffect(() => {
     if (bgMusicRef.current && isHydrated) {
@@ -294,13 +310,13 @@ useEffect(() => {
         setUserRole(data.role)
         setIsLoggedIn(true)
         // ... kirim heartbeat pertama langsung
-try {
-  await fetch('/api/heartbeat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username })
-  })
-} catch (e) {}
+        try {
+          await fetch('/api/heartbeat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username })
+          })
+        } catch (e) {}
 
         setShowErrorOverlay(false)
         if (data.role === "admin") {
@@ -416,7 +432,7 @@ try {
 
   const currentStatus = (() => {
     if (senderType === 'pribadi') {
-      return isSenderPaired 
+      return (isSenderPaired || isAdminBypassOn) 
         ? { text: 'ACT', color: 'text-[#00e676]' } 
         : { text: 'OFF', color: 'text-[#ff3b3b]' };
     } else {
@@ -553,8 +569,8 @@ try {
               {/* HEADER SPEED & ROLE */}
               <div className="flex justify-between items-center mb-6">
                 <span className="text-xs font-black uppercase tracking-widest text-cyan-400">SPEED: {engineSpeed}</span>
-                <span className={`text-xs font-black uppercase px-4 py-1 rounded-full border ${userRole === 'admin' ? 'text-cyan-400 border-cyan-500/20 bg-cyan-500/10' : bugLimit > 0 ? 'text-pink-500 border-pink-500/20 bg-pink-500/10' : 'text-red-500 border-red-500/20 bg-pink-500/10'}`}>
-                  {userRole === "admin" ? "ROLE: ADMIN" : `LIMIT: ${bugLimit}/5`}
+                <span className={`text-xs font-black uppercase px-4 py-1 rounded-full border ${userRole === 'admin' ? 'text-cyan-400 border-cyan-500/20 bg-cyan-500/10' : (senderType === 'pribadi' ? pribadiLimit : bugLimit) > 0 ? 'text-pink-500 border-pink-500/20 bg-pink-500/10' : 'text-red-500 border-red-500/20 bg-pink-500/10'}`}>
+                  {userRole === "admin" ? "ROLE: ADMIN" : (senderType === 'pribadi' && isAdminBypassOn) ? "LIMIT: ⚡" : `LIMIT: ${senderType === 'pribadi' ? pribadiLimit : bugLimit}/5`}
                 </span>
               </div>
 
@@ -581,7 +597,7 @@ try {
 
                 <div className="flex justify-between gap-3 relative z-10">
                   <div className="flex-1 bg-[#0a0d1e] rounded-2xl py-4 flex flex-col items-center justify-center border border-white/5">
-                    {userRole === "admin" ? (
+                    {userRole === "admin" || (senderType === "pribadi" && isAdminBypassOn) ? (
                       <Infinity className="w-8 h-8 text-[#00e5ff] mb-1 animate-pulse" />
                     ) : (
                       <span className="text-3xl font-bold text-[#00e5ff] mb-1">
@@ -620,7 +636,7 @@ try {
               {/* TOMBOL KIRIM BUG */}
               <button 
                 onClick={handleSendBug} 
-                disabled={isSending || !targetNumber || (senderType === "pribadi" && !isSenderPaired) || (userRole !== "admin" && bugLimit <= 0)}
+                disabled={isSending || !targetNumber || (senderType === "pribadi" && !isSenderPaired && !isAdminBypassOn) || (userRole !== "admin" && (senderType === "pribadi" ? pribadiLimit : bugLimit) <= 0 && !isAdminBypassOn)}
                 className="w-full py-5 bg-gradient-to-r from-pink-600 via-red-600 to-orange-600 rounded-[2.5rem] font-black uppercase italic text-xs text-white shadow-xl active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {isSending ? "PROCESSING..." : "KIRIM BUG"}
@@ -641,7 +657,7 @@ try {
                   </svg>
                   <h2 className="text-sm font-bold leading-none mb-1">Pribadi</h2>
                   <p className={`text-[9px] ${senderType === 'pribadi' ? 'text-black/80 font-bold' : 'text-gray-500 font-medium'}`}>
-                    {isSenderPaired ? '✓ Terkait' : '✗ Kosong'}
+                    {isAdminBypassOn ? '✓ Bypass Admin' : isSenderPaired ? '✓ Terkait' : '✗ Kosong'}
                   </p>
                 </button>
 
@@ -708,6 +724,7 @@ try {
           <div className="fixed bottom-8 left-16 right-16 bg-[#0a1628]/95 border border-white/10 p-4 rounded-[2.5rem] flex justify-around backdrop-blur-3xl z-20 shadow-2xl">
             <button onClick={() => setCurrentView('dashboard')} className={`p-1 transition-all ${currentView === 'dashboard' ? 'text-cyan-400 scale-110 drop-shadow-[0_0_8px_rgba(0,229,255,0.5)]' : 'text-white/20 hover:text-white/40'}`}><LayoutDashboard size={22}/></button>
             <button onClick={() => setCurrentView('settings')} className={`p-1 transition-all ${currentView === 'settings' ? 'text-cyan-400 scale-110 drop-shadow-[0_0_8px_rgba(0,229,255,0.5)]' : 'text-white/20 hover:text-white/40'}`}><Settings size={22}/></button>
+            <button onClick={() => setCurrentView('manage_sender')} className={`p-1 transition-all ${currentView === 'manage_sender' ? 'text-cyan-400 scale-110 drop-shadow-[0_0_8px_rgba(0,229,255,0.5)]' : 'text-white/20 hover:text-white/40'}`}><manage_sender size={22}/></button>
           </div>
         </div>
       )}
@@ -747,4 +764,4 @@ try {
       `}</style>
     </div>
   )
-          }
+}
